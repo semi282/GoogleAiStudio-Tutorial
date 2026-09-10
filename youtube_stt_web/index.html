@@ -1,243 +1,444 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="ko" class="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>YouTube 오디오 & Gemini STT Studio</title>
+  <title>YouTube Transcriber & AI Assistant</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            yt: {
+              black: '#0f0f0f',
+              dark: '#181818',
+              card: '#212121',
+              hover: '#272727',
+              border: '#383838',
+              red: '#ff0000',
+              text: '#f1f1f1',
+              muted: '#aaaaaa'
+            }
+          }
+        }
+      }
+    }
+  </script>
   <style>
     @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
-    body { font-family: 'Pretendard', sans-serif; }
-    .gradient-text {
-      background: linear-gradient(135deg, #2563eb, #7c3aed, #db2777);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
+    body { font-family: 'Pretendard', sans-serif; background-color: #0f0f0f; color: #f1f1f1; }
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #0f0f0f; }
+    ::-webkit-scrollbar-thumb { background: #383838; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #555555; }
   </style>
 </head>
-<body class="bg-slate-50 min-h-screen text-slate-800">
+<body class="bg-yt-black min-h-screen flex flex-col overflow-x-hidden">
 
-  <!-- Header -->
-  <header class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
-    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-      <div class="flex items-center space-x-3">
-        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md">
-          <i class="fa-solid fa-microphone-lines text-lg"></i>
+  <!-- ================= TOP NAV BAR (YouTube Style) ================= -->
+  <header class="h-14 bg-yt-black border-b border-yt-border/50 sticky top-0 z-40 px-4 flex items-center justify-between gap-4">
+    
+    <!-- Left: Hamburger & YouTube Logo -->
+    <div class="flex items-center gap-4 flex-shrink-0">
+      <button onclick="toggleLeftDrawer()" class="p-2 hover:bg-yt-hover rounded-full transition text-yt-text focus:outline-none" title="대화 리스트 토글">
+        <i class="fa-solid fa-bars text-lg"></i>
+      </button>
+      
+      <div class="flex items-center gap-1 cursor-pointer select-none" onclick="newSession()">
+        <div class="text-yt-red text-2xl flex items-center">
+          <i class="fa-brands fa-youtube"></i>
         </div>
-        <div>
-          <h1 class="text-xl font-bold tracking-tight">YouTube Audio & Gemini STT</h1>
-          <p class="text-xs text-slate-500">Google AI Studio & Gemini 3.5 Transcribe</p>
+        <span class="text-lg font-bold tracking-tighter text-white ml-0.5">YouTube</span>
+        <span class="text-[10px] text-yt-muted font-semibold ml-0.5 self-start pt-1">KR</span>
+        <span class="text-xs text-blue-400 font-medium ml-2 px-1.5 py-0.5 rounded bg-blue-500/10 border border-blue-500/20">Transcriber</span>
+      </div>
+    </div>
+
+    <!-- Center: Search Bar (Used as URL input) -->
+    <div class="flex-1 max-w-2xl mx-auto flex items-center">
+      <div class="flex w-full items-center">
+        <div class="relative flex-1 flex items-center">
+          <input type="text" id="youtubeUrl" 
+                 placeholder="유튜브 영상 링크를 입력하세요 (예: https://www.youtube.com/watch?v=...)"
+                 onkeydown="if(event.key==='Enter') startProcess()"
+                 class="w-full bg-[#121212] border border-[#303030] focus:border-blue-500 rounded-l-full py-2 px-5 text-sm text-yt-text placeholder-yt-muted outline-none transition shadow-inner">
+          <button onclick="document.getElementById('youtubeUrl').value=''" class="absolute right-3 text-yt-muted hover:text-white text-xs">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
         </div>
+        <button onclick="startProcess()" 
+                class="bg-[#222222] hover:bg-[#272727] border border-l-0 border-[#303030] rounded-r-full px-6 py-2 text-yt-text transition flex items-center justify-center group" 
+                title="전사 및 분석 시작">
+          <i class="fa-solid fa-magnifying-glass text-sm group-hover:scale-110 transition"></i>
+        </button>
       </div>
-      <div class="flex items-center space-x-2">
-        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
-          <span class="w-2 h-2 mr-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
-          서버 가동 중
-        </span>
-      </div>
+    </div>
+
+    <!-- Right: Settings / API Key Button (Red X items removed!) -->
+    <div class="flex items-center gap-2 flex-shrink-0">
+      <button onclick="openSettingsModal()" class="flex items-center gap-1.5 px-3 py-1.5 bg-yt-hover hover:bg-yt-card border border-yt-border/50 rounded-full text-xs font-medium text-yt-muted hover:text-white transition">
+        <i class="fa-solid fa-gear"></i>
+        <span id="apiKeyBadge">API 키 설정</span>
+      </button>
+
+      <button onclick="toggleRightDrawer()" class="p-2 hover:bg-yt-hover rounded-full transition text-yt-text" title="오른쪽 패널 토글">
+        <i class="fa-solid fa-sidebar text-base"></i>
+      </button>
     </div>
   </header>
 
-  <!-- Main Content -->
-  <main class="max-w-6xl mx-auto px-4 py-8">
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-      
-      <!-- Left Column: Input Form & Settings -->
-      <div class="lg:col-span-1 space-y-6">
-        
-        <!-- URL Input Card -->
-        <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
-          <h2 class="text-lg font-bold mb-4 flex items-center gap-2">
-            <i class="fa-brands fa-youtube text-red-500 text-xl"></i>
-            영상 URL 입력
-          </h2>
+  <!-- ================= MAIN LAYOUT (Left Drawer + Center Video + Right Panel) ================= -->
+  <div class="flex-1 flex relative overflow-hidden">
+
+    <!-- ================= LEFT DRAWER: 대화 리스트 (History) ================= -->
+    <aside id="leftDrawer" 
+           class="w-72 bg-yt-dark border-r border-yt-border/40 flex-shrink-0 flex flex-col transition-all duration-300 ease-in-out z-30 select-none">
+      <div class="p-4 border-b border-yt-border/40 flex items-center justify-between">
+        <div class="flex items-center gap-2 text-sm font-bold text-white">
+          <i class="fa-solid fa-comments text-blue-400"></i>
+          <span>대화 리스트</span>
+        </div>
+        <button onclick="newSession()" class="text-xs bg-yt-hover hover:bg-yt-border px-2.5 py-1 rounded-lg text-yt-text transition flex items-center gap-1">
+          <i class="fa-solid fa-plus"></i> 새 영상
+        </button>
+      </div>
+
+      <div id="historyList" class="flex-1 overflow-y-auto p-2 space-y-1">
+        <!-- History items will be inserted dynamically -->
+        <div id="emptyHistoryMsg" class="p-6 text-center text-xs text-yt-muted">
+          분석한 영상 기록이 없습니다.<br>상단에 링크를 입력해 보세요.
+        </div>
+      </div>
+
+      <div class="p-3 border-t border-yt-border/30 text-[11px] text-yt-muted flex justify-between items-center">
+        <span>로컬 저장소 동기화</span>
+        <button onclick="clearHistory()" class="hover:text-red-400 transition">전체 삭제</button>
+      </div>
+    </aside>
+
+    <!-- ================= CENTER: VIDEO PLAYER & METADATA ================= -->
+    <main class="flex-1 overflow-y-auto p-4 md:p-6 transition-all duration-300 flex flex-col items-center">
+      <div class="w-full max-w-4xl space-y-4">
+
+        <!-- Video Player Box -->
+        <div class="w-full aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl border border-yt-border/40 relative flex items-center justify-center">
           
-          <div class="space-y-4">
+          <!-- YouTube Iframe Embed -->
+          <iframe id="videoIframe" class="w-full h-full hidden" 
+                  src="" title="YouTube video player" frameborder="0" 
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                  allowfullscreen></iframe>
+
+          <!-- Initial Placeholder Screen -->
+          <div id="videoPlaceholder" class="flex flex-col items-center justify-center text-center p-6 space-y-3">
+            <div class="w-20 h-20 rounded-full bg-yt-hover border border-yt-border/50 flex items-center justify-center text-3xl text-yt-red shadow-lg">
+              <i class="fa-brands fa-youtube"></i>
+            </div>
+            <h2 class="text-lg font-bold text-white">시청할 유튜브 영상 링크를 입력해 주세요</h2>
+            <p class="text-xs text-yt-muted max-w-sm">
+              상단 검색창에 URL을 입력하고 돋보기 버튼을 누르면 영상이 로드되고 자막과 AI 분석이 시작됩니다.
+            </p>
+          </div>
+
+          <!-- Loading Overlay -->
+          <div id="loadingOverlay" class="absolute inset-0 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center hidden z-20 space-y-3">
+            <div class="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+            <p id="loadingStatusText" class="text-sm font-semibold text-white">오디오 다운로드 및 Gemini 전사 진행 중...</p>
+            <p class="text-xs text-yt-muted">잠시만 기다려 주세요 (약 5~15초 소요)</p>
+          </div>
+        </div>
+
+        <!-- Video Title -->
+        <div>
+          <h1 id="videoTitleText" class="text-lg md:text-xl font-bold text-white line-clamp-2 leading-snug">
+            영상 제목이 여기에 표시됩니다.
+          </h1>
+        </div>
+
+        <!-- Channel Info & Action Buttons Bar (Matching User's Screenshot!) -->
+        <div class="flex flex-wrap items-center justify-between gap-4 pt-1 pb-4 border-b border-yt-border/40">
+          
+          <!-- Channel Profile -->
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-yt-card border border-yt-border/50 flex items-center justify-center text-white overflow-hidden font-bold">
+              <span id="channelAvatarText">YT</span>
+            </div>
             <div>
-              <label class="block text-sm font-semibold text-slate-700 mb-1.5">YouTube 링크</label>
-              <div class="relative">
-                <input type="text" id="youtubeUrl" placeholder="https://www.youtube.com/watch?v=..." 
-                       class="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
-                <i class="fa-solid fa-link absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
-              </div>
+              <div id="channelNameText" class="text-sm font-semibold text-white">채널명</div>
+              <div id="videoMetaText" class="text-xs text-yt-muted">재생시간: -</div>
             </div>
+          </div>
 
-            <!-- API Key -->
-            <div>
-              <label class="block text-sm font-semibold text-slate-700 mb-1.5 flex justify-between">
-                <span>Gemini API Key</span>
-                <span id="apiKeyStatus" class="text-xs text-emerald-600 font-normal">환경변수 감지됨</span>
-              </label>
-              <div class="relative">
-                <input type="password" id="apiKey" placeholder="AI Studio API Key (비어있으면 환경변수 사용)" 
-                       class="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
-                <i class="fa-solid fa-key absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
-              </div>
-            </div>
+          <!-- Action Buttons (Red X excluded! Kept '질문하기' & '스크립트'!) -->
+          <div class="flex items-center gap-2">
+            
+            <!-- ✨ 질문하기 Button (Exact style from screenshot) -->
+            <button onclick="openRightTab('chat')" 
+                    class="flex items-center gap-2 px-4 py-2 bg-yt-card hover:bg-yt-hover border border-yt-border/60 rounded-full text-sm font-semibold text-white transition shadow-sm active:scale-95">
+              <i class="fa-solid fa-wand-magic-sparkles text-blue-400"></i>
+              <span>질문하기</span>
+            </button>
 
-            <!-- Model Selection -->
-            <div>
-              <label class="block text-sm font-semibold text-slate-700 mb-1.5">전사 모델</label>
-              <select id="modelSelect" class="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white">
-                <option value="gemini-3.6-flash" selected>gemini-3.6-flash (추천: 영어/한국어 완벽 지원)</option>
-                <option value="gemini-3.5-transcribe">gemini-3.5-transcribe (전사 전용)</option>
-              </select>
-            </div>
+            <!-- 📄 스크립트 Button -->
+            <button onclick="openRightTab('script')" 
+                    class="flex items-center gap-2 px-4 py-2 bg-yt-card hover:bg-yt-hover border border-yt-border/60 rounded-full text-sm font-semibold text-white transition shadow-sm active:scale-95">
+              <i class="fa-solid fa-file-lines text-emerald-400"></i>
+              <span>스크립트</span>
+            </button>
 
-            <!-- Options -->
-            <div class="pt-2 border-t border-slate-100 space-y-2.5">
-              <label class="flex items-center space-x-2 text-sm text-slate-700 cursor-pointer">
-                <input type="checkbox" id="optDiarization" checked class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500">
-                <span>화자 분리 (Diarization)</span>
-              </label>
-              <label class="flex items-center space-x-2 text-sm text-slate-700 cursor-pointer">
-                <input type="checkbox" id="optTimestamps" checked class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500">
-                <span>타임스탬프 (Timestamps)</span>
-              </label>
-              <label class="flex items-center space-x-2 text-sm text-slate-700 cursor-pointer">
-                <input type="checkbox" id="optSummary" checked class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500">
-                <span>AI 3줄 핵심 요약 생성</span>
-              </label>
-            </div>
+            <!-- 💡 요약 Button -->
+            <button onclick="openRightTab('summary')" 
+                    class="flex items-center gap-2 px-4 py-2 bg-yt-card hover:bg-yt-hover border border-yt-border/60 rounded-full text-sm font-semibold text-white transition shadow-sm active:scale-95">
+              <i class="fa-regular fa-lightbulb text-amber-400"></i>
+              <span>요약</span>
+            </button>
 
-            <!-- Submit Button -->
-            <button id="startBtn" onclick="startProcess()" 
-                    class="w-full py-3.5 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center space-x-2">
-              <i class="fa-solid fa-bolt"></i>
-              <span>오디오 추출 및 전사 시작</span>
+          </div>
+
+        </div>
+
+      </div>
+    </main>
+
+    <!-- ================= RIGHT DRAWER: 스크립트 & 질문하기 ================= -->
+    <aside id="rightDrawer" 
+           class="w-96 bg-yt-dark border-l border-yt-border/40 flex-shrink-0 flex flex-col transition-all duration-300 ease-in-out z-30">
+      
+      <!-- Drawer Header with Tabs -->
+      <div class="h-12 border-b border-yt-border/40 flex items-center justify-between px-3 select-none">
+        <div class="flex items-center gap-1">
+          <button id="tabBtnScript" onclick="switchRightTab('script')" 
+                  class="px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 bg-yt-hover text-white">
+            <i class="fa-solid fa-file-lines text-emerald-400"></i>
+            <span>스크립트</span>
+          </button>
+          <button id="tabBtnChat" onclick="switchRightTab('chat')" 
+                  class="px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 text-yt-muted hover:text-white">
+            <i class="fa-solid fa-wand-magic-sparkles text-blue-400"></i>
+            <span>질문하기</span>
+          </button>
+          <button id="tabBtnSummary" onclick="switchRightTab('summary')" 
+                  class="px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 text-yt-muted hover:text-white">
+            <i class="fa-regular fa-lightbulb text-amber-400"></i>
+            <span>요약</span>
+          </button>
+        </div>
+
+        <button onclick="toggleRightDrawer()" class="p-1.5 hover:bg-yt-hover rounded-full text-yt-muted hover:text-white transition" title="패널 접기">
+          <i class="fa-solid fa-xmark text-sm"></i>
+        </button>
+      </div>
+
+      <!-- TAB 1: SCRIPT (Transcript) -->
+      <div id="tabContentScript" class="flex-1 flex flex-col overflow-hidden">
+        <div class="p-2 border-b border-yt-border/30 flex items-center justify-between bg-yt-black/30">
+          <span class="text-xs text-yt-muted font-medium">타임스탬프 & 화자별 대본</span>
+          <div class="flex items-center gap-1.5">
+            <button onclick="copyTranscript()" class="px-2 py-1 bg-yt-card hover:bg-yt-hover rounded text-[11px] text-yt-muted hover:text-white transition flex items-center gap-1">
+              <i class="fa-regular fa-copy"></i> 복사
+            </button>
+            <button onclick="downloadTranscript()" class="px-2 py-1 bg-yt-card hover:bg-yt-hover rounded text-[11px] text-yt-muted hover:text-white transition flex items-center gap-1">
+              <i class="fa-solid fa-download"></i> TXT
             </button>
           </div>
         </div>
 
-        <!-- Progress Indicator -->
-        <div id="progressCard" class="hidden bg-white rounded-2xl p-5 shadow-sm border border-slate-200 space-y-3">
-          <div class="flex items-center justify-between text-sm font-semibold">
-            <span id="progressTitle" class="flex items-center gap-2">
-              <svg class="animate-spin h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
-              </svg>
-              처리 진행 중...
-            </span>
-            <span id="progressBadge" class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">작업 중</span>
-          </div>
-          <p id="progressDetail" class="text-xs text-slate-500">유튜브 영상을 분석하고 있습니다...</p>
+        <div id="transcriptView" class="flex-1 overflow-y-auto p-4 space-y-3 text-xs leading-relaxed font-mono select-text">
+          <p class="text-yt-muted text-center py-10">상단에 유튜브 링크를 입력하고 분석을 시작하면 스크립트가 표시됩니다.</p>
         </div>
-
       </div>
 
-      <!-- Right Column: Results Area -->
-      <div class="lg:col-span-2 space-y-6">
-
-        <!-- Initial Placeholder Card -->
-        <div id="placeholderCard" class="bg-white rounded-2xl p-12 shadow-sm border border-slate-200 text-center">
-          <div class="w-16 h-16 bg-blue-50 text-blue-500 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl">
-            <i class="fa-solid fa-headphones"></i>
-          </div>
-          <h3 class="text-lg font-bold text-slate-800 mb-1">영상을 분석할 준비가 되었습니다</h3>
-          <p class="text-sm text-slate-500 max-w-md mx-auto">
-            좌측에 유튜브 링크를 입력하고 [시작] 버튼을 누르면 고음질 오디오가 추출되고 대본과 요약이 이곳에 표시됩니다.
-          </p>
+      <!-- TAB 2: CHAT (질문하기 Q&A) -->
+      <div id="tabContentChat" class="flex-1 flex flex-col overflow-hidden hidden">
+        <div class="p-2.5 border-b border-yt-border/30 bg-yt-black/30 text-xs text-blue-400 flex items-center gap-1.5">
+          <i class="fa-solid fa-circle-info text-blue-400"></i>
+          <span>영상 대본 내용을 바탕으로 AI가 즉시 답변합니다.</span>
         </div>
 
-        <!-- Result Content (Hidden by default) -->
-        <div id="resultContainer" class="hidden space-y-6">
-
-          <!-- Video & Audio Player Card -->
-          <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 flex flex-col md:flex-row gap-5 items-center">
-            <img id="videoThumb" src="" alt="Thumbnail" class="w-full md:w-48 h-28 object-cover rounded-xl shadow-sm">
-            <div class="flex-1 space-y-2 w-full">
-              <h3 id="videoTitle" class="text-base font-bold text-slate-800 line-clamp-2">영상 제목</h3>
-              <p id="videoMeta" class="text-xs text-slate-500">채널명 | 재생시간</p>
-              
-              <div class="pt-2">
-                <label class="block text-xs font-semibold text-slate-600 mb-1">🎧 추출된 오디오 스트림 재생:</label>
-                <audio id="audioPlayer" controls class="w-full h-10 rounded-lg outline-none"></audio>
-              </div>
-            </div>
+        <!-- Chat Messages Container -->
+        <div id="chatMessages" class="flex-1 overflow-y-auto p-3 space-y-3 text-xs">
+          <div class="bg-yt-card/80 border border-yt-border/30 rounded-xl p-3 text-yt-muted">
+            👋 안녕하세요! 이 영상에 대해 궁금한 점을 물어보세요.<br><br>
+            예시 질문:<br>
+            • "이 영상의 핵심 주제가 뭐야?"<br>
+            • "등장인물들은 무엇에 대해 이야기했어?"<br>
+            • "결론이나 요점을 정리해줘"
           </div>
-
-          <!-- AI Summary Card (If available) -->
-          <div id="summaryCard" class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-6">
-            <h4 class="text-sm font-bold text-blue-900 mb-2 flex items-center gap-2">
-              <i class="fa-solid fa-wand-magic-sparkles text-blue-600"></i>
-              Gemini AI 핵심 요약 리포트
-            </h4>
-            <div id="summaryText" class="text-sm text-slate-700 whitespace-pre-line leading-relaxed"></div>
-          </div>
-
-          <!-- Transcript Card -->
-          <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 space-y-4">
-            <div class="flex items-center justify-between">
-              <h4 class="text-base font-bold text-slate-800 flex items-center gap-2">
-                <i class="fa-solid fa-file-lines text-blue-600"></i>
-                전체 트랜스크립트 (Full Transcript)
-              </h4>
-              <div class="flex items-center gap-2">
-                <button onclick="copyTranscript()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold transition flex items-center gap-1.5">
-                  <i class="fa-regular fa-copy"></i>
-                  <span id="copyBtnText">대본 복사</span>
-                </button>
-                <button onclick="downloadTranscript()" class="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-xs font-semibold transition flex items-center gap-1.5">
-                  <i class="fa-solid fa-download"></i>
-                  <span>TXT 다운로드</span>
-                </button>
-              </div>
-            </div>
-
-            <textarea id="transcriptText" readonly 
-                      class="w-full h-96 p-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono leading-relaxed text-slate-700 outline-none resize-y"></textarea>
-          </div>
-
         </div>
 
+        <!-- Chat Input Bar -->
+        <div class="p-3 border-t border-yt-border/40 bg-yt-black/50">
+          <div class="flex items-center gap-2">
+            <input type="text" id="chatInput" 
+                   placeholder="영상에 대해 질문해 보세요..."
+                   onkeydown="if(event.key==='Enter') sendChatMessage()"
+                   class="flex-1 bg-yt-card border border-yt-border focus:border-blue-500 rounded-xl px-3 py-2 text-xs text-white outline-none">
+            <button onclick="sendChatMessage()" 
+                    class="bg-blue-600 hover:bg-blue-500 text-white rounded-xl px-3 py-2 text-xs font-semibold transition flex items-center justify-center">
+              <i class="fa-solid fa-paper-plane"></i>
+            </button>
+          </div>
+        </div>
       </div>
 
+      <!-- TAB 3: SUMMARY (요약 리포트) -->
+      <div id="tabContentSummary" class="flex-1 flex flex-col overflow-hidden p-4 hidden">
+        <div class="flex items-center gap-2 text-sm font-bold text-amber-400 mb-3">
+          <i class="fa-solid fa-wand-magic-sparkles"></i>
+          <span>AI 핵심 요약 리포트</span>
+        </div>
+        <div id="summaryView" class="flex-1 overflow-y-auto bg-yt-card/60 border border-yt-border/30 rounded-xl p-4 text-xs leading-relaxed text-yt-text whitespace-pre-line">
+          영상 전사가 완료되면 핵심 요약이 이곳에 표시됩니다.
+        </div>
+      </div>
+
+    </aside>
+
+  </div>
+
+  <!-- ================= SETTINGS MODAL ================= -->
+  <div id="settingsModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-yt-dark border border-yt-border rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-yt-border pb-3">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-gear text-blue-400"></i> 환경 설정
+        </h3>
+        <button onclick="closeSettingsModal()" class="text-yt-muted hover:text-white">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block font-semibold text-yt-text mb-1">Google Gemini API Key</label>
+          <input type="password" id="modalApiKey" placeholder="API Key 입력 (비워두면 시스템 환경변수 사용)" 
+                 class="w-full bg-yt-card border border-yt-border rounded-lg p-2.5 text-xs text-white outline-none focus:border-blue-500">
+          <p id="modalEnvKeyNotice" class="text-[11px] text-emerald-400 mt-1">✔ 서버 환경변수(GEMINI_API_KEY) 연동됨</p>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-yt-text mb-1">전사 모델</label>
+          <select id="modalModel" class="w-full bg-yt-card border border-yt-border rounded-lg p-2.5 text-xs text-white outline-none">
+            <option value="gemini-3.6-flash" selected>gemini-3.6-flash (추천: 영어/한국어/다국어 완벽 지원)</option>
+            <option value="gemini-3.5-transcribe">gemini-3.5-transcribe (전사 전용)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="pt-3 flex justify-end gap-2">
+        <button onclick="closeSettingsModal()" class="px-4 py-2 rounded-lg bg-yt-hover text-xs text-yt-muted hover:text-white transition">닫기</button>
+        <button onclick="saveSettings()" class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-xs font-semibold text-white transition">저장</button>
+      </div>
     </div>
-  </main>
+  </div>
 
+  <!-- ================= JAVASCRIPT LOGIC ================= -->
   <script>
-    // Initial check for API Key env
-    fetch('/api/config')
-      .then(res => res.json())
-      .then(data => {
-        const statusEl = document.getElementById('apiKeyStatus');
-        if (data.has_env_key) {
-          statusEl.textContent = "✔ 환경변수(GEMINI_API_KEY) 연동됨";
-          statusEl.className = "text-xs text-emerald-600 font-normal";
-        } else {
-          statusEl.textContent = "⚠️ 직접 입력 필요";
-          statusEl.className = "text-xs text-amber-600 font-normal";
-        }
-      })
-      .catch(() => {});
+    let currentSession = {
+      id: '',
+      title: '',
+      channel: '',
+      duration: 0,
+      transcript: '',
+      summary: '',
+      chatHistory: []
+    };
 
+    let historyList = JSON.parse(localStorage.getItem('yt_transcriber_history') || '[]');
+
+    // Initialize
+    window.addEventListener('DOMContentLoaded', () => {
+      renderHistory();
+      checkApiConfig();
+    });
+
+    function checkApiConfig() {
+      fetch('/api/config')
+        .then(r => r.json())
+        .then(d => {
+          const badge = document.getElementById('apiKeyBadge');
+          const notice = document.getElementById('modalEnvKeyNotice');
+          if (d.has_env_key) {
+            badge.textContent = "API 키 연동됨";
+            notice.textContent = "✔ 시스템 환경변수(GEMINI_API_KEY)가 정상 감지되었습니다.";
+          } else {
+            badge.textContent = "API 키 필요";
+            notice.textContent = "⚠️ 환경변수 없음: API 키를 입력해 주세요.";
+            notice.className = "text-[11px] text-amber-400 mt-1";
+          }
+        });
+    }
+
+    // Toggle Left Drawer (대화 리스트)
+    function toggleLeftDrawer() {
+      const drawer = document.getElementById('leftDrawer');
+      if (drawer.classList.contains('w-72')) {
+        drawer.classList.remove('w-72');
+        drawer.classList.add('w-0', '-translate-x-full');
+      } else {
+        drawer.classList.remove('w-0', '-translate-x-full');
+        drawer.classList.add('w-72');
+      }
+    }
+
+    // Toggle Right Drawer (스크립트 & 질문하기)
+    function toggleRightDrawer() {
+      const drawer = document.getElementById('rightDrawer');
+      if (drawer.classList.contains('w-96')) {
+        drawer.classList.remove('w-96');
+        drawer.classList.add('w-0', 'translate-x-full');
+      } else {
+        drawer.classList.remove('w-0', 'translate-x-full');
+        drawer.classList.add('w-96');
+      }
+    }
+
+    function openRightDrawer() {
+      const drawer = document.getElementById('rightDrawer');
+      drawer.classList.remove('w-0', 'translate-x-full');
+      drawer.classList.add('w-96');
+    }
+
+    // Switch Tabs in Right Drawer
+    function switchRightTab(tab) {
+      const tabs = ['script', 'chat', 'summary'];
+      tabs.forEach(t => {
+        const btn = document.getElementById('tabBtn' + t.charAt(0).toUpperCase() + t.slice(1));
+        const content = document.getElementById('tabContent' + t.charAt(0).toUpperCase() + t.slice(1));
+        if (t === tab) {
+          btn.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 bg-yt-hover text-white";
+          content.classList.remove('hidden');
+        } else {
+          btn.className = "px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 text-yt-muted hover:text-white";
+          content.classList.add('hidden');
+        }
+      });
+    }
+
+    function openRightTab(tab) {
+      openRightDrawer();
+      switchRightTab(tab);
+    }
+
+    // Start Process
     async function startProcess() {
       const url = document.getElementById('youtubeUrl').value.trim();
-      const apiKey = document.getElementById('apiKey').value.trim();
-      const model = document.getElementById('modelSelect').value;
-      const diarization = document.getElementById('optDiarization').checked;
-      const timestamps = document.getElementById('optTimestamps').checked;
-      const summary = document.getElementById('optSummary').checked;
-
       if (!url) {
         alert('유튜브 영상 URL을 입력해 주세요.');
         return;
       }
 
-      // UI state
-      const startBtn = document.getElementById('startBtn');
-      const progressCard = document.getElementById('progressCard');
-      const progressTitle = document.getElementById('progressTitle');
-      const progressDetail = document.getElementById('progressDetail');
-      const placeholderCard = document.getElementById('placeholderCard');
-      const resultContainer = document.getElementById('resultContainer');
+      const apiKey = localStorage.getItem('user_gemini_key') || '';
+      const model = localStorage.getItem('user_gemini_model') || 'gemini-3.6-flash';
 
-      startBtn.disabled = true;
-      startBtn.classList.add('opacity-50', 'cursor-not-allowed');
-      progressCard.classList.remove('hidden');
-      progressDetail.textContent = '유튜브 영상 메타데이터 분석 및 오디오 다운로드 중...';
+      const overlay = document.getElementById('loadingOverlay');
+      const statusText = document.getElementById('loadingStatusText');
+      overlay.classList.remove('hidden');
+      statusText.textContent = "1/3. 유튜브 영상 분석 및 고음질 오디오 다운로드 중...";
 
       try {
         const response = await fetch('/api/transcribe', {
@@ -247,65 +448,255 @@
             url: url,
             api_key: apiKey,
             model: model,
-            enable_diarization: diarization,
-            enable_timestamps: timestamps,
-            enable_summary: summary
+            enable_diarization: true,
+            enable_timestamps: true,
+            enable_summary: true
           })
         });
 
-        const data = await response.json();
+        statusText.textContent = "2/3. Gemini로 음성 텍스트 전사(STT) 진행 중...";
 
+        const data = await response.json();
         if (!response.ok) {
           throw new Error(data.detail || '처리 중 오류가 발생했습니다.');
         }
 
-        // Render Results
-        placeholderCard.classList.add('hidden');
-        resultContainer.classList.remove('hidden');
+        // Success
+        currentSession = {
+          id: data.id,
+          title: data.title,
+          channel: data.channel,
+          duration: data.duration,
+          transcript: data.transcript,
+          summary: data.summary,
+          chatHistory: []
+        };
 
-        document.getElementById('videoThumb').src = data.thumbnail;
-        document.getElementById('videoTitle').textContent = data.title;
-        document.getElementById('videoMeta').textContent = `채널: ${data.channel} | 재생시간: ${data.duration}초`;
-
-        const audioPlayer = document.getElementById('audioPlayer');
-        audioPlayer.src = data.audio_url;
-
-        document.getElementById('transcriptText').value = data.transcript;
-
-        const summaryCard = document.getElementById('summaryCard');
-        if (data.summary) {
-          summaryCard.classList.remove('hidden');
-          document.getElementById('summaryText').textContent = data.summary;
-        } else {
-          summaryCard.classList.add('hidden');
-        }
+        // Render UI
+        renderSession(currentSession);
+        addToHistory(currentSession);
+        openRightDrawer();
+        switchRightTab('script');
 
       } catch (err) {
         alert('오류 발생: ' + err.message);
       } finally {
-        startBtn.disabled = false;
-        startBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-        progressCard.classList.add('hidden');
+        overlay.classList.add('hidden');
       }
     }
 
+    function renderSession(s) {
+      // 1. Video Player
+      const placeholder = document.getElementById('videoPlaceholder');
+      const iframe = document.getElementById('videoIframe');
+      if (s.id) {
+        placeholder.classList.add('hidden');
+        iframe.classList.remove('hidden');
+        iframe.src = `https://www.youtube.com/embed/${s.id}?autoplay=1`;
+      }
+
+      // 2. Title & Meta
+      document.getElementById('videoTitleText').textContent = s.title;
+      document.getElementById('channelNameText').textContent = s.channel;
+      document.getElementById('channelAvatarText').textContent = s.channel ? s.channel.charAt(0).toUpperCase() : 'YT';
+      document.getElementById('videoMetaText').textContent = `재생시간: ${s.duration}초`;
+
+      // 3. Transcript
+      const tView = document.getElementById('transcriptView');
+      tView.innerHTML = '';
+      if (s.transcript) {
+        const lines = s.transcript.split('\n');
+        lines.forEach(line => {
+          if (!line.trim()) return;
+          const p = document.createElement('p');
+          p.className = "py-1 px-2 rounded hover:bg-yt-hover/60 transition cursor-text leading-relaxed";
+          p.textContent = line;
+          tView.appendChild(p);
+        });
+      } else {
+        tView.innerHTML = '<p class="text-yt-muted text-center py-10">대본이 비어있습니다.</p>';
+      }
+
+      // 4. Summary
+      document.getElementById('summaryView').textContent = s.summary || "요약 내용이 없습니다.";
+
+      // 5. Chat Reset
+      renderChat();
+    }
+
+    // Chat Logic (질문하기)
+    async function sendChatMessage() {
+      const input = document.getElementById('chatInput');
+      const question = input.value.trim();
+      if (!question) return;
+
+      if (!currentSession.transcript) {
+        alert('먼저 영상을 분석하여 스크립트를 생성해 주세요.');
+        return;
+      }
+
+      // Append user msg
+      currentSession.chatHistory.push({ role: 'user', text: question });
+      input.value = '';
+      renderChat();
+
+      // Placeholder bot msg
+      const chatBox = document.getElementById('chatMessages');
+      const botMsgDiv = document.createElement('div');
+      botMsgDiv.className = "bg-yt-card border border-yt-border/40 rounded-xl p-3 text-yt-muted animate-pulse";
+      botMsgDiv.textContent = "Gemini가 영상 대본을 분석하여 답변을 작성하고 있습니다...";
+      chatBox.appendChild(botMsgDiv);
+      chatBox.scrollTop = chatBox.scrollHeight;
+
+      try {
+        const apiKey = localStorage.getItem('user_gemini_key') || '';
+        const res = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            question: question,
+            transcript: currentSession.transcript,
+            api_key: apiKey
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || '답변 생성 실패');
+
+        currentSession.chatHistory.push({ role: 'assistant', text: data.answer });
+      } catch (e) {
+        currentSession.chatHistory.push({ role: 'assistant', text: '오류가 발생했습니다: ' + e.message });
+      } finally {
+        renderChat();
+      }
+    }
+
+    function renderChat() {
+      const box = document.getElementById('chatMessages');
+      box.innerHTML = '';
+      
+      if (currentSession.chatHistory.length === 0) {
+        box.innerHTML = `
+          <div class="bg-yt-card/80 border border-yt-border/30 rounded-xl p-3 text-yt-muted">
+            👋 이 영상에 대해 궁금한 점을 질문해 보세요.<br><br>
+            • "이 영상의 핵심 주제가 뭐야?"<br>
+            • "등장인물들은 무엇에 대해 이야기했어?"<br>
+            • "결론이나 요점을 정리해줘"
+          </div>
+        `;
+        return;
+      }
+
+      currentSession.chatHistory.forEach(msg => {
+        const el = document.createElement('div');
+        if (msg.role === 'user') {
+          el.className = "bg-blue-600/20 border border-blue-500/30 text-white rounded-xl p-3 ml-4";
+          el.innerHTML = `<span class="font-bold text-blue-400 block mb-1">나의 질문:</span>${msg.text}`;
+        } else {
+          el.className = "bg-yt-card border border-yt-border/40 text-yt-text rounded-xl p-3 mr-2 leading-relaxed whitespace-pre-line";
+          el.innerHTML = `<span class="font-bold text-emerald-400 flex items-center gap-1 mb-1"><i class="fa-solid fa-wand-magic-sparkles text-xs"></i> AI 답변:</span>${msg.text}`;
+        }
+        box.appendChild(el);
+      });
+      box.scrollTop = box.scrollHeight;
+    }
+
+    // History Storage
+    function addToHistory(session) {
+      historyList = historyList.filter(h => h.id !== session.id);
+      historyList.unshift(session);
+      if (historyList.length > 20) historyList.pop();
+      localStorage.setItem('yt_transcriber_history', JSON.stringify(historyList));
+      renderHistory();
+    }
+
+    function renderHistory() {
+      const listEl = document.getElementById('historyList');
+      listEl.innerHTML = '';
+      if (historyList.length === 0) {
+        listEl.innerHTML = '<div class="p-6 text-center text-xs text-yt-muted">분석한 영상 기록이 없습니다.<br>상단에 링크를 입력해 보세요.</div>';
+        return;
+      }
+
+      historyList.forEach(item => {
+        const div = document.createElement('div');
+        div.className = "p-2.5 rounded-xl hover:bg-yt-hover cursor-pointer transition flex items-center gap-2 group text-xs";
+        div.onclick = () => {
+          currentSession = item;
+          renderSession(item);
+          openRightDrawer();
+        };
+
+        div.innerHTML = `
+          <div class="w-12 h-8 rounded bg-yt-black flex-shrink-0 overflow-hidden flex items-center justify-center border border-yt-border/30">
+            <i class="fa-brands fa-youtube text-red-500"></i>
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="font-semibold text-white truncate">${item.title || '영상'}</p>
+            <p class="text-[10px] text-yt-muted truncate">${item.channel || '채널'}</p>
+          </div>
+        `;
+        listEl.appendChild(div);
+      });
+    }
+
+    function clearHistory() {
+      if (confirm('대화 및 영상 기록을 모두 삭제하시겠습니까?')) {
+        historyList = [];
+        localStorage.removeItem('yt_transcriber_history');
+        renderHistory();
+      }
+    }
+
+    function newSession() {
+      document.getElementById('youtubeUrl').value = '';
+      document.getElementById('videoIframe').src = '';
+      document.getElementById('videoIframe').classList.add('hidden');
+      document.getElementById('videoPlaceholder').classList.remove('hidden');
+      document.getElementById('videoTitleText').textContent = '영상 제목이 여기에 표시됩니다.';
+      document.getElementById('channelNameText').textContent = '채널명';
+      document.getElementById('videoMetaText').textContent = '재생시간: -';
+      document.getElementById('transcriptView').innerHTML = '<p class="text-yt-muted text-center py-10">상단에 유튜브 링크를 입력하고 분석을 시작하면 스크립트가 표시됩니다.</p>';
+      document.getElementById('summaryView').textContent = '영상 전사가 완료되면 핵심 요약이 이곳에 표시됩니다.';
+      currentSession = { id: '', title: '', channel: '', duration: 0, transcript: '', summary: '', chatHistory: [] };
+      renderChat();
+    }
+
+    // Copy & Download
     function copyTranscript() {
-      const text = document.getElementById('transcriptText').value;
-      navigator.clipboard.writeText(text).then(() => {
-        const btnText = document.getElementById('copyBtnText');
-        btnText.textContent = "복사 완료!";
-        setTimeout(() => { btnText.textContent = "대본 복사"; }, 2000);
+      if (!currentSession.transcript) return;
+      navigator.clipboard.writeText(currentSession.transcript).then(() => {
+        alert('스크립트가 클립보드에 복사되었습니다.');
       });
     }
 
     function downloadTranscript() {
-      const text = document.getElementById('transcriptText').value;
-      const title = document.getElementById('videoTitle').textContent || "transcript";
-      const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+      if (!currentSession.transcript) return;
+      const blob = new Blob([currentSession.transcript], { type: 'text/plain;charset=utf-8' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = `${title.replace(/[\/\\?%*:|"<>]/g, '_')}_transcript.txt`;
+      a.download = `${(currentSession.title || 'transcript').replace(/[\/\\?%*:|"<>]/g, '_')}.txt`;
       a.click();
+    }
+
+    // Modal
+    function openSettingsModal() {
+      document.getElementById('modalApiKey').value = localStorage.getItem('user_gemini_key') || '';
+      document.getElementById('modalModel').value = localStorage.getItem('user_gemini_model') || 'gemini-3.6-flash';
+      document.getElementById('settingsModal').classList.remove('hidden');
+    }
+
+    function closeSettingsModal() {
+      document.getElementById('settingsModal').classList.add('hidden');
+    }
+
+    function saveSettings() {
+      const key = document.getElementById('modalApiKey').value.trim();
+      const model = document.getElementById('modalModel').value;
+      localStorage.setItem('user_gemini_key', key);
+      localStorage.setItem('user_gemini_model', model);
+      closeSettingsModal();
+      checkApiConfig();
     }
   </script>
 </body>

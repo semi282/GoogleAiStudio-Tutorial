@@ -62,6 +62,7 @@ def download_audio(url: str, output_dir: str = "downloads") -> Dict[str, Any]:
         mime_type = mime_map.get(ext, "audio/mp4")
 
         return {
+            "id": info.get("id", ""),
             "file_path": filename,
             "title": info.get("title", "Unknown Title"),
             "channel": info.get("uploader") or info.get("channel", "Unknown Channel"),

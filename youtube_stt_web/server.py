@@ -96,6 +96,7 @@ async def handle_transcribe(req: TranscribeRequest):
         audio_filename = Path(audio_info["file_path"]).name
 
         return {
+            "id": audio_info.get("id", ""),
             "title": audio_info["title"],
             "channel": audio_info["channel"],
             "duration": audio_info["duration"],
@@ -105,6 +106,40 @@ async def handle_transcribe(req: TranscribeRequest):
             "summary": summary_text,
         }
 
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class ChatRequest(BaseModel):
+    question: str
+    transcript: str
+    api_key: Optional[str] = None
+    model: str = "gemini-3.6-flash"
+
+
+@app.post("/api/chat")
+async def handle_chat(req: ChatRequest):
+    effective_api_key = req.api_key.strip() if req.api_key else os.environ.get("GEMINI_API_KEY")
+    if not effective_api_key:
+        raise HTTPException(status_code=400, detail="Gemini API Key가 필요합니다.")
+
+    try:
+        client = genai.Client(api_key=effective_api_key)
+        prompt = f"""당신은 제공된 유튜브 영상 트랜스크립트(대본)를 기반으로 시청자의 질문에 친절하고 정확하게 답변하는 전문 AI 어시스턴트입니다.
+대본에 언급된 내용을 바탕으로 자연스러운 한국어로 명쾌하게 답변해 주세요.
+만약 대본에 없는 내용이라면 상상해서 지어내지 말고 "대본에 해당 내용이 언급되지 않았습니다"라고 솔직하게 안내해 주세요.
+
+[영상 대본]:
+{req.transcript[:35000]}
+
+[시청자 질문]:
+{req.question}
+"""
+        response = client.models.generate_content(
+            model=req.model,
+            contents=prompt,
+        )
+        return {"answer": response.text or "답변을 생성할 수 없습니다."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
