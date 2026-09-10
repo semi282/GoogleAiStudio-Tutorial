@@ -190,17 +190,19 @@
   },
   "active": "2c4d22b4c4df2a6c",
   "lastOpenFiles": [
-    "youtube_stt_web/downloads/U8v4A_zXhq4.m4a",
-    "gemini_35_stt/README.md",
-    "youtube_stt_web/downloads/U8v4A_zXhq4.m4a.part",
-    "youtube_stt_web/downloads",
-    "youtube_stt_web/__pycache__/server.cpython-312.pyc",
-    "youtube_stt_web/server.py",
-    "youtube_stt_web/index.html",
-    "youtube_stt_web/__pycache__/transcriber.cpython-312.pyc",
-    "youtube_stt_web/__pycache__/app.cpython-312.pyc",
-    "youtube_stt_web/__pycache__/downloader.cpython-312.pyc",
-    "youtube_stt_web/__pycache__",
-    "youtube_stt_web/README.md"
+    "youtube_stt_web/downloads/wfZbUcAPKdU.m4a",
+    "youtube_stt_web/downloads/wfZbUcAPKdU.m4a.part",
+    "ai_youtube_search/downloads",
+    "ai_youtube_search/__pycache__/transcriber.cpython-312.pyc",
+    "ai_youtube_search/__pycache__/cost_calc.cpython-312.pyc",
+    "ai_youtube_search/__pycache__/server.cpython-312.pyc",
+    "ai_youtube_search/__pycache__/downloader.cpython-312.pyc",
+    "ai_youtube_search/__pycache__",
+    "ai_youtube_search/README.md",
+    "ai_youtube_search/requirements.txt",
+    "ai_youtube_search/index.html",
+    "ai_youtube_search/server.py",
+    "youtube_stt_web/README.md",
+    "gemini_35_stt/README.md"
   ]
 }
