@@ -6,7 +6,6 @@
   <title>자막뽑기 AI - 유튜브 영상 검색 & AI 자막 추출기</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <script src="https://www.youtube.com/iframe_api"></script>
   <script>
     tailwind.config = {
       darkMode: 'class',
@@ -129,121 +128,28 @@
     <main class="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col items-center">
       <div class="w-full max-w-4xl space-y-3">
 
-        <!-- Player Mode Selection Bar -->
-        <div id="playerModeBar" class="hidden items-center justify-between bg-brand-card/80 border border-brand-border/60 rounded-xl px-3 py-1.5 text-xs">
-          <div class="flex items-center gap-1.5">
-            <span class="text-brand-muted font-semibold text-[11px] mr-1">재생 모드:</span>
-            <button id="btnModeVideo" onclick="setPlayerMode('video')" 
-                    class="px-2.5 py-1 rounded-lg font-bold transition flex items-center gap-1.5 bg-brand-red text-white shadow-sm">
-              <i class="fa-solid fa-film text-xs"></i> 🎬 실제 영상 재생 (오류 0% 보장)
-            </button>
-            <button id="btnModeAudio" onclick="setPlayerMode('audio')" 
-                    class="px-2.5 py-1 rounded-lg font-semibold transition flex items-center gap-1.5 text-brand-muted hover:text-white hover:bg-brand-hover">
-              <i class="fa-solid fa-volume-high text-xs"></i> 🎵 오디오 모드
-            </button>
-            <button id="btnModeYoutube" onclick="setPlayerMode('youtube')" 
-                    class="px-2.5 py-1 rounded-lg font-semibold transition flex items-center gap-1.5 text-brand-muted hover:text-white hover:bg-brand-hover">
-              <i class="fa-brands fa-youtube text-brand-red text-xs"></i> 📺 유튜브 임베드
-            </button>
-          </div>
-          <a id="btnOpenYoutubeExternal" href="#" target="_blank" rel="noopener noreferrer"
-             class="inline-flex items-center gap-1 text-[11px] text-brand-muted hover:text-white hover:underline transition">
-            <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i> 유튜브에서 열기
-          </a>
-        </div>
-
-        <!-- Video & Audio Player Container -->
+        <!-- Video Player Container (Pure YouTube Embed) -->
         <div class="w-full aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl border border-brand-border/60 relative flex items-center justify-center">
           
-          <!-- Mode 1: Native HTML5 High-Quality Video Player (100% Error-free real video) -->
-          <video id="localVideo" class="w-full h-full object-contain bg-black hidden z-10" controls playsinline preload="auto"></video>
-
-          <!-- Mode 2: YouTube Iframe Embed -->
-          <iframe id="videoIframe" class="w-full h-full hidden z-10" 
-                  src="" title="YouTube video player" frameborder="0" 
+          <!-- YouTube Iframe Embed -->
+          <iframe id="videoIframe" 
+                  class="w-full h-full hidden" 
+                  src="" 
+                  title="YouTube video player" 
+                  frameborder="0" 
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-                  referrerpolicy="strict-origin-when-cross-origin"
-                  allowfullscreen></iframe>
-
-          <!-- Mode 3: Integrated Local Audio Player with Backdrop -->
-          <div id="audioPlayerContainer" class="w-full h-full hidden relative flex-col justify-between p-4 md:p-6 select-none z-10">
-            <!-- Background Blurred Thumbnail -->
-            <img id="audioBgThumbnail" src="" class="absolute inset-0 w-full h-full object-cover filter blur-xl brightness-35 pointer-events-none">
-            <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/70 pointer-events-none"></div>
-
-            <!-- Top Info in Audio Player -->
-            <div class="relative z-10 flex items-center justify-between">
-              <span class="inline-flex items-center gap-1.5 bg-brand-purple/30 border border-brand-purple/50 text-brand-purple text-[11px] px-2.5 py-0.5 rounded-full font-bold">
-                <i class="fa-solid fa-headphones"></i> 고음질 오디오 스트리밍
-              </span>
-              <span id="audioStatusBadge" class="text-[11px] text-emerald-400 font-mono">
-                ● 타임스탬프 싱크 연동 중
-              </span>
-            </div>
-
-            <!-- Center Thumbnail Card & Pulse Visualizer -->
-            <div class="relative z-10 flex flex-col items-center justify-center space-y-3 my-auto">
-              <div class="w-24 h-24 md:w-28 md:h-28 rounded-2xl overflow-hidden shadow-2xl border-2 border-brand-purple/40 relative group">
-                <img id="audioCenterThumbnail" src="" class="w-full h-full object-cover">
-                <button onclick="toggleAudioPlay()" class="absolute inset-0 bg-black/40 hover:bg-black/20 flex items-center justify-center text-white text-3xl transition">
-                  <i id="audioCenterPlayIcon" class="fa-solid fa-play"></i>
-                </button>
-              </div>
-              <div class="text-center max-w-md px-2">
-                <p id="audioPlayerTitle" class="text-sm md:text-base font-bold text-white truncate"></p>
-                <p id="audioPlayerChannel" class="text-xs text-brand-muted truncate mt-0.5"></p>
-              </div>
-            </div>
-
-            <!-- Bottom Control Bar -->
-            <div class="relative z-10 bg-brand-card/90 backdrop-blur-md border border-brand-border/70 rounded-xl p-2.5 space-y-2">
-              <audio id="localAudio" preload="auto"></audio>
-              
-              <!-- Progress Bar -->
-              <div class="flex items-center gap-2">
-                <span id="audioCurrentTime" class="text-[11px] font-mono text-brand-muted w-10 text-right">00:00</span>
-                <input id="audioSeekBar" type="range" min="0" max="100" value="0" step="0.1"
-                       class="flex-1 h-1.5 bg-brand-border rounded-lg appearance-none cursor-pointer accent-brand-purple">
-                <span id="audioTotalDuration" class="text-[11px] font-mono text-brand-muted w-10">00:00</span>
-              </div>
-
-              <!-- Buttons Row -->
-              <div class="flex items-center justify-between pt-0.5">
-                <div class="flex items-center gap-2">
-                  <button onclick="seekRelative(-10)" class="px-2 py-1 text-xs text-brand-muted hover:text-white transition" title="10초 뒤로">
-                    <i class="fa-solid fa-rotate-left"></i> -10s
-                  </button>
-                  <button onclick="toggleAudioPlay()" id="audioPlayBtn" 
-                          class="w-8 h-8 rounded-full bg-brand-purple hover:bg-purple-600 flex items-center justify-center text-white text-sm transition shadow">
-                    <i id="audioPlayBtnIcon" class="fa-solid fa-play"></i>
-                  </button>
-                  <button onclick="seekRelative(10)" class="px-2 py-1 text-xs text-brand-muted hover:text-white transition" title="10초 앞으로">
-                    +10s <i class="fa-solid fa-rotate-right"></i>
-                  </button>
-                </div>
-
-                <!-- Playback Rate Selector -->
-                <div class="flex items-center gap-1 text-[11px]">
-                  <span class="text-brand-muted mr-1">배속:</span>
-                  <button onclick="setAudioSpeed(1.0)" class="speed-btn px-1.5 py-0.5 rounded bg-brand-purple text-white font-bold text-[10px]" data-speed="1.0">1.0x</button>
-                  <button onclick="setAudioSpeed(1.25)" class="speed-btn px-1.5 py-0.5 rounded text-brand-muted hover:text-white text-[10px]" data-speed="1.25">1.25x</button>
-                  <button onclick="setAudioSpeed(1.5)" class="speed-btn px-1.5 py-0.5 rounded text-brand-muted hover:text-white text-[10px]" data-speed="1.5">1.5x</button>
-                  <button onclick="setAudioSpeed(2.0)" class="speed-btn px-1.5 py-0.5 rounded text-brand-muted hover:text-white text-[10px]" data-speed="2.0">2.0x</button>
-                </div>
-              </div>
-            </div>
-
-          </div>
+                  allowfullscreen>
+          </iframe>
 
           <!-- Initial Placeholder Screen -->
           <div id="videoPlaceholder" class="flex flex-col items-center justify-center text-center p-6 space-y-3">
             <div class="w-20 h-20 rounded-2xl bg-gradient-to-tr from-brand-red/20 to-brand-purple/20 border border-brand-red/30 flex items-center justify-center text-3xl text-brand-red shadow-lg">
-              <i class="fa-solid fa-clapperboard"></i>
+              <i class="fa-brands fa-youtube"></i>
             </div>
             <h2 class="text-lg font-bold text-white">유튜브 링크를 입력하여 시작하세요</h2>
             <p class="text-xs text-brand-muted max-w-sm">
               상단 검색창에 URL을 넣으면 **Gemini 3.5 Transcribe**로 자막을 추출하고, <br>
-              타임스탬프를 클릭하여 원하는 위치를 바로 들을 수 있습니다.
+              타임스탬프를 클릭하여 해당 영상 위치로 바로 이동합니다.
             </p>
           </div>
 
@@ -548,19 +454,11 @@
       ? '' 
       : 'http://127.0.0.1:8000';
 
-    let ytPlayer = null;
-    let isYtApiReady = false;
     let historyList = JSON.parse(localStorage.getItem('zapok_history') || '[]');
-    let activePlayerMode = 'video'; // 'video' | 'audio' | 'youtube'
-
-    function onYouTubeIframeAPIReady() {
-      isYtApiReady = true;
-    }
 
     window.addEventListener('DOMContentLoaded', () => {
       loadHistoryFromServer();
       checkApiConfig();
-      initAudioListeners();
     });
 
     function escapeHtml(str) {
@@ -645,126 +543,7 @@
       switchRightTab(tab);
     }
 
-    // ================= 플레이어 모드 전환 (실제 비디오 vs 오디오 vs 유튜브) =================
-    function setPlayerMode(mode) {
-      activePlayerMode = mode;
-      const btnVideo = document.getElementById('btnModeVideo');
-      const btnAudio = document.getElementById('btnModeAudio');
-      const btnYt = document.getElementById('btnModeYoutube');
-      const localVideo = document.getElementById('localVideo');
-      const audioContainer = document.getElementById('audioPlayerContainer');
-      const videoIframe = document.getElementById('videoIframe');
-      const placeholder = document.getElementById('videoPlaceholder');
-
-      placeholder.classList.add('hidden');
-
-      btnVideo.className = "px-2.5 py-1 rounded-lg font-semibold transition flex items-center gap-1.5 text-brand-muted hover:text-white hover:bg-brand-hover";
-      btnAudio.className = "px-2.5 py-1 rounded-lg font-semibold transition flex items-center gap-1.5 text-brand-muted hover:text-white hover:bg-brand-hover";
-      btnYt.className = "px-2.5 py-1 rounded-lg font-semibold transition flex items-center gap-1.5 text-brand-muted hover:text-white hover:bg-brand-hover";
-
-      localVideo.classList.add('hidden');
-      audioContainer.classList.add('hidden');
-      audioContainer.classList.remove('flex');
-      videoIframe.classList.add('hidden');
-
-      if (mode === 'video') {
-        btnVideo.className = "px-2.5 py-1 rounded-lg font-bold transition flex items-center gap-1.5 bg-brand-red text-white shadow-sm";
-        localVideo.classList.remove('hidden');
-      } else if (mode === 'audio') {
-        btnAudio.className = "px-2.5 py-1 rounded-lg font-bold transition flex items-center gap-1.5 bg-brand-purple text-white shadow-sm";
-        audioContainer.classList.remove('hidden');
-        audioContainer.classList.add('flex');
-      } else if (mode === 'youtube') {
-        btnYt.className = "px-2.5 py-1 rounded-lg font-bold transition flex items-center gap-1.5 bg-brand-red text-white shadow-sm";
-        videoIframe.classList.remove('hidden');
-        if (currentSession.id) {
-          loadYouTubeVideo(currentSession.id, 0);
-        }
-      }
-    }
-
-    function initAudioListeners() {
-      const audio = document.getElementById('localAudio');
-      const seekBar = document.getElementById('audioSeekBar');
-      const curTimeEl = document.getElementById('audioCurrentTime');
-      const totalDurEl = document.getElementById('audioTotalDuration');
-      const playIcon = document.getElementById('audioPlayBtnIcon');
-      const centerPlayIcon = document.getElementById('audioCenterPlayIcon');
-
-      audio.addEventListener('timeupdate', () => {
-        if (!isNaN(audio.duration) && audio.duration > 0) {
-          seekBar.value = (audio.currentTime / audio.duration) * 100;
-          curTimeEl.textContent = formatSecondsToTime(audio.currentTime);
-          totalDurEl.textContent = formatSecondsToTime(audio.duration);
-        }
-      });
-
-      audio.addEventListener('loadedmetadata', () => {
-        totalDurEl.textContent = formatSecondsToTime(audio.duration);
-      });
-
-      seekBar.addEventListener('input', () => {
-        if (!isNaN(audio.duration) && audio.duration > 0) {
-          audio.currentTime = (seekBar.value / 100) * audio.duration;
-        }
-      });
-
-      audio.addEventListener('play', () => {
-        if (playIcon) playIcon.className = "fa-solid fa-pause";
-        if (centerPlayIcon) centerPlayIcon.className = "fa-solid fa-pause";
-      });
-
-      audio.addEventListener('pause', () => {
-        if (playIcon) playIcon.className = "fa-solid fa-play";
-        if (centerPlayIcon) centerPlayIcon.className = "fa-solid fa-play";
-      });
-    }
-
-    function toggleAudioPlay() {
-      const audio = document.getElementById('localAudio');
-      if (audio.paused) {
-        audio.play().catch(e => console.warn('Audio play failed:', e));
-      } else {
-        audio.pause();
-      }
-    }
-
-    function seekRelative(sec) {
-      const video = document.getElementById('localVideo');
-      if (activePlayerMode === 'video' && video && !video.classList.contains('hidden')) {
-        video.currentTime = Math.max(0, Math.min(video.duration || 9999, video.currentTime + sec));
-        video.play().catch(()=>{});
-        return;
-      }
-      const audio = document.getElementById('localAudio');
-      if (audio) {
-        audio.currentTime = Math.max(0, Math.min(audio.duration || 9999, audio.currentTime + sec));
-        audio.play().catch(()=>{});
-      }
-    }
-
-    function setAudioSpeed(rate) {
-      const video = document.getElementById('localVideo');
-      if (video) video.playbackRate = rate;
-      const audio = document.getElementById('localAudio');
-      if (audio) audio.playbackRate = rate;
-      document.querySelectorAll('.speed-btn').forEach(btn => {
-        if (parseFloat(btn.dataset.speed) === rate) {
-          btn.className = "speed-btn px-1.5 py-0.5 rounded bg-brand-purple text-white font-bold text-[10px]";
-        } else {
-          btn.className = "speed-btn px-1.5 py-0.5 rounded text-brand-muted hover:text-white text-[10px]";
-        }
-      });
-    }
-
-    function formatSecondsToTime(sec) {
-      const s = Math.floor(sec || 0);
-      const m = Math.floor(s / 60);
-      const remS = s % 60;
-      return `${String(m).padStart(2, '0')}:${String(remS).padStart(2, '0')}`;
-    }
-
-    // ================= 유튜브 플레이어 및 타임스탬프 이동 =================
+    // ================= 유튜브 임베드 및 타임스탬프 이동 =================
     function loadYouTubeVideo(videoId, startSeconds = 0) {
       const placeholder = document.getElementById('videoPlaceholder');
       const iframe = document.getElementById('videoIframe');
@@ -773,42 +552,12 @@
       iframe.classList.remove('hidden');
 
       const startParam = startSeconds > 0 ? `&start=${startSeconds}` : '';
-      const targetSrc = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=1&playsinline=1&rel=0${startParam}`;
-      
-      if (!iframe.src || !iframe.src.includes(videoId)) {
-        iframe.src = targetSrc;
-      }
+      iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0${startParam}`;
     }
 
     function seekToTime(seconds) {
-      // 1. 고화질 실제 비디오 이동 및 재생 (실제 영상 모드)
-      const video = document.getElementById('localVideo');
-      if (video && video.src && !video.classList.contains('hidden')) {
-        video.currentTime = seconds;
-        video.play().catch(e => console.warn('Video play:', e));
-      }
-
-      // 2. 고음질 로컬 오디오 이동 및 재생 (오디오 모드)
-      const audio = document.getElementById('localAudio');
-      if (audio && audio.src && !document.getElementById('audioPlayerContainer').classList.contains('hidden')) {
-        audio.currentTime = seconds;
-        audio.play().catch(e => console.warn('Audio play:', e));
-      }
-
-      // 3. 유튜브 IFrame 재생 (유튜브 모드일 때)
-      const iframe = document.getElementById('videoIframe');
-      if (iframe && iframe.contentWindow && !iframe.classList.contains('hidden')) {
-        iframe.contentWindow.postMessage(JSON.stringify({
-          event: 'command',
-          func: 'seekTo',
-          args: [seconds, true]
-        }), '*');
-        iframe.contentWindow.postMessage(JSON.stringify({
-          event: 'command',
-          func: 'playVideo',
-          args: []
-        }), '*');
-      }
+      if (!currentSession.id) return;
+      loadYouTubeVideo(currentSession.id, seconds);
     }
 
     function parseTimestampToSeconds(tsStr) {
@@ -832,7 +581,7 @@
       const overlay = document.getElementById('loadingOverlay');
       const statusText = document.getElementById('loadingStatusText');
       overlay.classList.remove('hidden');
-      statusText.textContent = "저장된 캐시 확인 및 영상/자막 추출 준비 중...";
+      statusText.textContent = "저장된 캐시 확인 및 자막 추출 준비 중...";
 
       const apiKey = localStorage.getItem('zapok_api_key') || '';
 
@@ -856,8 +605,6 @@
           channel: data.channel,
           duration: data.duration,
           thumbnail: data.thumbnail,
-          video_url: data.video_url,
-          audio_url: data.audio_url,
           transcript: data.transcript,
           summary: data.summary,
           costEstimate: data.cost_estimate,
@@ -883,42 +630,12 @@
     }
 
     function renderSession(s) {
-      // 1. Setup Player Mode UI & External link
-      const modeBar = document.getElementById('playerModeBar');
-      modeBar.classList.remove('hidden');
-      modeBar.classList.add('flex');
-
-      const ytExt = document.getElementById('btnOpenYoutubeExternal');
-      ytExt.href = s.url || `https://www.youtube.com/watch?v=${s.id}`;
-
-      // 2. Setup High-Quality Real Video Player
-      const localVideo = document.getElementById('localVideo');
-      if (s.video_url) {
-        localVideo.src = s.video_url.startsWith('http') ? s.video_url : `${API_BASE}${s.video_url}`;
-      } else if (s.id) {
-        localVideo.src = `${API_BASE}/api/video/${s.id}.mp4`;
+      // 1. Load YouTube Video Embed
+      if (s.id) {
+        loadYouTubeVideo(s.id, 0);
       }
-      localVideo.load();
 
-      // 3. Setup Audio Player
-      const thumbUrl = s.thumbnail || (s.id ? `https://img.youtube.com/vi/${s.id}/hqdefault.jpg` : '');
-      document.getElementById('audioBgThumbnail').src = thumbUrl;
-      document.getElementById('audioCenterThumbnail').src = thumbUrl;
-      document.getElementById('audioPlayerTitle').textContent = s.title || '영상 제목';
-      document.getElementById('audioPlayerChannel').textContent = s.channel || '채널';
-
-      const audio = document.getElementById('localAudio');
-      if (s.audio_url) {
-        audio.src = s.audio_url.startsWith('http') ? s.audio_url : `${API_BASE}${s.audio_url}`;
-      } else if (s.id) {
-        audio.src = `${API_BASE}/api/audio/${s.id}.m4a`;
-      }
-      audio.load();
-
-      // Default to real video player mode (or current active mode)
-      setPlayerMode(activePlayerMode || 'video');
-
-      // 4. Metadata
+      // 2. Metadata
       document.getElementById('videoTitleText').textContent = s.title || '영상 제목';
       document.getElementById('channelNameText').textContent = s.channel || '채널';
       document.getElementById('channelAvatarText').textContent = s.channel ? s.channel.charAt(0).toUpperCase() : 'YT';
