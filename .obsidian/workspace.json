@@ -13,7 +13,7 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "gemini_35_stt/README.md",
+                "file": "youtube_stt_web/README.md",
                 "mode": "source",
                 "source": false
               },
@@ -99,7 +99,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "gemini_35_stt/README.md",
+                "file": "youtube_stt_web/README.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -118,7 +118,7 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "gemini_35_stt/README.md",
+                "file": "youtube_stt_web/README.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
@@ -161,7 +161,7 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "gemini_35_stt/README.md",
+                "file": "youtube_stt_web/README.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
@@ -189,5 +189,18 @@
     }
   },
   "active": "2c4d22b4c4df2a6c",
-  "lastOpenFiles": []
+  "lastOpenFiles": [
+    "youtube_stt_web/downloads/U8v4A_zXhq4.m4a",
+    "gemini_35_stt/README.md",
+    "youtube_stt_web/downloads/U8v4A_zXhq4.m4a.part",
+    "youtube_stt_web/downloads",
+    "youtube_stt_web/__pycache__/server.cpython-312.pyc",
+    "youtube_stt_web/server.py",
+    "youtube_stt_web/index.html",
+    "youtube_stt_web/__pycache__/transcriber.cpython-312.pyc",
+    "youtube_stt_web/__pycache__/app.cpython-312.pyc",
+    "youtube_stt_web/__pycache__/downloader.cpython-312.pyc",
+    "youtube_stt_web/__pycache__",
+    "youtube_stt_web/README.md"
+  ]
 }

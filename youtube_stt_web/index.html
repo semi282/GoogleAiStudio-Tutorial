@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YouTube 오디오 & Gemini STT Studio</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+    body { font-family: 'Pretendard', sans-serif; }
+    .gradient-text {
+      background: linear-gradient(135deg, #2563eb, #7c3aed, #db2777);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 min-h-screen text-slate-800">
+
+  <!-- Header -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md">
+          <i class="fa-solid fa-microphone-lines text-lg"></i>
+        </div>
+        <div>
+          <h1 class="text-xl font-bold tracking-tight">YouTube Audio & Gemini STT</h1>
+          <p class="text-xs text-slate-500">Google AI Studio & Gemini 3.5 Transcribe</p>
+        </div>
+      </div>
+      <div class="flex items-center space-x-2">
+        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
+          <span class="w-2 h-2 mr-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
+          서버 가동 중
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="max-w-6xl mx-auto px-4 py-8">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      
+      <!-- Left Column: Input Form & Settings -->
+      <div class="lg:col-span-1 space-y-6">
+        
+        <!-- URL Input Card -->
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
+          <h2 class="text-lg font-bold mb-4 flex items-center gap-2">
+            <i class="fa-brands fa-youtube text-red-500 text-xl"></i>
+            영상 URL 입력
+          </h2>
+          
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-semibold text-slate-700 mb-1.5">YouTube 링크</label>
+              <div class="relative">
+                <input type="text" id="youtubeUrl" placeholder="https://www.youtube.com/watch?v=..." 
+                       class="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
+                <i class="fa-solid fa-link absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
+              </div>
+            </div>
+
+            <!-- API Key -->
+            <div>
+              <label class="block text-sm font-semibold text-slate-700 mb-1.5 flex justify-between">
+                <span>Gemini API Key</span>
+                <span id="apiKeyStatus" class="text-xs text-emerald-600 font-normal">환경변수 감지됨</span>
+              </label>
+              <div class="relative">
+                <input type="password" id="apiKey" placeholder="AI Studio API Key (비어있으면 환경변수 사용)" 
+                       class="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
+                <i class="fa-solid fa-key absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
+              </div>
+            </div>
+
+            <!-- Model Selection -->
+            <div>
+              <label class="block text-sm font-semibold text-slate-700 mb-1.5">전사 모델</label>
+              <select id="modelSelect" class="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                <option value="gemini-3.6-flash" selected>gemini-3.6-flash (추천: 영어/한국어 완벽 지원)</option>
+                <option value="gemini-3.5-transcribe">gemini-3.5-transcribe (전사 전용)</option>
+              </select>
+            </div>
+
+            <!-- Options -->
+            <div class="pt-2 border-t border-slate-100 space-y-2.5">
+              <label class="flex items-center space-x-2 text-sm text-slate-700 cursor-pointer">
+                <input type="checkbox" id="optDiarization" checked class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500">
+                <span>화자 분리 (Diarization)</span>
+              </label>
+              <label class="flex items-center space-x-2 text-sm text-slate-700 cursor-pointer">
+                <input type="checkbox" id="optTimestamps" checked class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500">
+                <span>타임스탬프 (Timestamps)</span>
+              </label>
+              <label class="flex items-center space-x-2 text-sm text-slate-700 cursor-pointer">
+                <input type="checkbox" id="optSummary" checked class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500">
+                <span>AI 3줄 핵심 요약 생성</span>
+              </label>
+            </div>
+
+            <!-- Submit Button -->
+            <button id="startBtn" onclick="startProcess()" 
+                    class="w-full py-3.5 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center space-x-2">
+              <i class="fa-solid fa-bolt"></i>
+              <span>오디오 추출 및 전사 시작</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Progress Indicator -->
+        <div id="progressCard" class="hidden bg-white rounded-2xl p-5 shadow-sm border border-slate-200 space-y-3">
+          <div class="flex items-center justify-between text-sm font-semibold">
+            <span id="progressTitle" class="flex items-center gap-2">
+              <svg class="animate-spin h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+              </svg>
+              처리 진행 중...
+            </span>
+            <span id="progressBadge" class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">작업 중</span>
+          </div>
+          <p id="progressDetail" class="text-xs text-slate-500">유튜브 영상을 분석하고 있습니다...</p>
+        </div>
+
+      </div>
+
+      <!-- Right Column: Results Area -->
+      <div class="lg:col-span-2 space-y-6">
+
+        <!-- Initial Placeholder Card -->
+        <div id="placeholderCard" class="bg-white rounded-2xl p-12 shadow-sm border border-slate-200 text-center">
+          <div class="w-16 h-16 bg-blue-50 text-blue-500 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl">
+            <i class="fa-solid fa-headphones"></i>
+          </div>
+          <h3 class="text-lg font-bold text-slate-800 mb-1">영상을 분석할 준비가 되었습니다</h3>
+          <p class="text-sm text-slate-500 max-w-md mx-auto">
+            좌측에 유튜브 링크를 입력하고 [시작] 버튼을 누르면 고음질 오디오가 추출되고 대본과 요약이 이곳에 표시됩니다.
+          </p>
+        </div>
+
+        <!-- Result Content (Hidden by default) -->
+        <div id="resultContainer" class="hidden space-y-6">
+
+          <!-- Video & Audio Player Card -->
+          <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 flex flex-col md:flex-row gap-5 items-center">
+            <img id="videoThumb" src="" alt="Thumbnail" class="w-full md:w-48 h-28 object-cover rounded-xl shadow-sm">
+            <div class="flex-1 space-y-2 w-full">
+              <h3 id="videoTitle" class="text-base font-bold text-slate-800 line-clamp-2">영상 제목</h3>
+              <p id="videoMeta" class="text-xs text-slate-500">채널명 | 재생시간</p>
+              
+              <div class="pt-2">
+                <label class="block text-xs font-semibold text-slate-600 mb-1">🎧 추출된 오디오 스트림 재생:</label>
+                <audio id="audioPlayer" controls class="w-full h-10 rounded-lg outline-none"></audio>
+              </div>
+            </div>
+          </div>
+
+          <!-- AI Summary Card (If available) -->
+          <div id="summaryCard" class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-6">
+            <h4 class="text-sm font-bold text-blue-900 mb-2 flex items-center gap-2">
+              <i class="fa-solid fa-wand-magic-sparkles text-blue-600"></i>
+              Gemini AI 핵심 요약 리포트
+            </h4>
+            <div id="summaryText" class="text-sm text-slate-700 whitespace-pre-line leading-relaxed"></div>
+          </div>
+
+          <!-- Transcript Card -->
+          <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 space-y-4">
+            <div class="flex items-center justify-between">
+              <h4 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                <i class="fa-solid fa-file-lines text-blue-600"></i>
+                전체 트랜스크립트 (Full Transcript)
+              </h4>
+              <div class="flex items-center gap-2">
+                <button onclick="copyTranscript()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold transition flex items-center gap-1.5">
+                  <i class="fa-regular fa-copy"></i>
+                  <span id="copyBtnText">대본 복사</span>
+                </button>
+                <button onclick="downloadTranscript()" class="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-xs font-semibold transition flex items-center gap-1.5">
+                  <i class="fa-solid fa-download"></i>
+                  <span>TXT 다운로드</span>
+                </button>
+              </div>
+            </div>
+
+            <textarea id="transcriptText" readonly 
+                      class="w-full h-96 p-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono leading-relaxed text-slate-700 outline-none resize-y"></textarea>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+  </main>
+
+  <script>
+    // Initial check for API Key env
+    fetch('/api/config')
+      .then(res => res.json())
+      .then(data => {
+        const statusEl = document.getElementById('apiKeyStatus');
+        if (data.has_env_key) {
+          statusEl.textContent = "✔ 환경변수(GEMINI_API_KEY) 연동됨";
+          statusEl.className = "text-xs text-emerald-600 font-normal";
+        } else {
+          statusEl.textContent = "⚠️ 직접 입력 필요";
+          statusEl.className = "text-xs text-amber-600 font-normal";
+        }
+      })
+      .catch(() => {});
+
+    async function startProcess() {
+      const url = document.getElementById('youtubeUrl').value.trim();
+      const apiKey = document.getElementById('apiKey').value.trim();
+      const model = document.getElementById('modelSelect').value;
+      const diarization = document.getElementById('optDiarization').checked;
+      const timestamps = document.getElementById('optTimestamps').checked;
+      const summary = document.getElementById('optSummary').checked;
+
+      if (!url) {
+        alert('유튜브 영상 URL을 입력해 주세요.');
+        return;
+      }
+
+      // UI state
+      const startBtn = document.getElementById('startBtn');
+      const progressCard = document.getElementById('progressCard');
+      const progressTitle = document.getElementById('progressTitle');
+      const progressDetail = document.getElementById('progressDetail');
+      const placeholderCard = document.getElementById('placeholderCard');
+      const resultContainer = document.getElementById('resultContainer');
+
+      startBtn.disabled = true;
+      startBtn.classList.add('opacity-50', 'cursor-not-allowed');
+      progressCard.classList.remove('hidden');
+      progressDetail.textContent = '유튜브 영상 메타데이터 분석 및 오디오 다운로드 중...';
+
+      try {
+        const response = await fetch('/api/transcribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            url: url,
+            api_key: apiKey,
+            model: model,
+            enable_diarization: diarization,
+            enable_timestamps: timestamps,
+            enable_summary: summary
+          })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.detail || '처리 중 오류가 발생했습니다.');
+        }
+
+        // Render Results
+        placeholderCard.classList.add('hidden');
+        resultContainer.classList.remove('hidden');
+
+        document.getElementById('videoThumb').src = data.thumbnail;
+        document.getElementById('videoTitle').textContent = data.title;
+        document.getElementById('videoMeta').textContent = `채널: ${data.channel} | 재생시간: ${data.duration}초`;
+
+        const audioPlayer = document.getElementById('audioPlayer');
+        audioPlayer.src = data.audio_url;
+
+        document.getElementById('transcriptText').value = data.transcript;
+
+        const summaryCard = document.getElementById('summaryCard');
+        if (data.summary) {
+          summaryCard.classList.remove('hidden');
+          document.getElementById('summaryText').textContent = data.summary;
+        } else {
+          summaryCard.classList.add('hidden');
+        }
+
+      } catch (err) {
+        alert('오류 발생: ' + err.message);
+      } finally {
+        startBtn.disabled = false;
+        startBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        progressCard.classList.add('hidden');
+      }
+    }
+
+    function copyTranscript() {
+      const text = document.getElementById('transcriptText').value;
+      navigator.clipboard.writeText(text).then(() => {
+        const btnText = document.getElementById('copyBtnText');
+        btnText.textContent = "복사 완료!";
+        setTimeout(() => { btnText.textContent = "대본 복사"; }, 2000);
+      });
+    }
+
+    function downloadTranscript() {
+      const text = document.getElementById('transcriptText').value;
+      const title = document.getElementById('videoTitle').textContent || "transcript";
+      const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `${title.replace(/[\/\\?%*:|"<>]/g, '_')}_transcript.txt`;
+      a.click();
+    }
+  </script>
+</body>
+</html>
