@@ -9,6 +9,8 @@ from google import genai
 from google.genai import types
 
 
+# 변경사항이 발생했습니다
+
 def save_binary_file(file_name, data):
     f = open(file_name, "wb")
     f.write(data)
@@ -109,8 +111,8 @@ def convert_to_wav(audio_data: bytes, mime_type: str) -> bytes:
         A bytes object representing the WAV file header.
     """
     parameters = parse_audio_mime_type(mime_type)
-    bits_per_sample = parameters["bits_per_sample"]
-    sample_rate = parameters["rate"]
+    bits_per_sample = parameters["bits_per_sample"] or 16
+    sample_rate = parameters["rate"] or 24000
     num_channels = 1
     data_size = len(audio_data)
     bytes_per_sample = bits_per_sample // 8
@@ -138,7 +140,7 @@ def convert_to_wav(audio_data: bytes, mime_type: str) -> bytes:
     )
     return header + audio_data
 
-def parse_audio_mime_type(mime_type: str) -> dict[str, int | None]:
+def parse_audio_mime_type(mime_type: str) -> dict[str, int]:
     """Parses bits per sample and rate from an audio MIME type string.
 
     Assumes bits per sample is encoded like "L16" and rate as "rate=xxxxx".
@@ -147,8 +149,7 @@ def parse_audio_mime_type(mime_type: str) -> dict[str, int | None]:
         mime_type: The audio MIME type string (e.g., "audio/L16;rate=24000").
 
     Returns:
-        A dictionary with "bits_per_sample" and "rate" keys. Values will be
-        integers if found, otherwise None.
+        A dictionary with "bits_per_sample" and "rate" keys.
     """
     bits_per_sample = 16
     rate = 24000

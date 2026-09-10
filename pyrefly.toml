@@ -1,0 +1,4 @@
+python-interpreter-path = "C:/Users/think/anaconda3/envs/myenv/python.exe"
+site-package-path = [
+    "C:/Users/think/anaconda3/envs/myenv/Lib/site-packages"
+]

@@ -1,5 +1,6 @@
-﻿{
-    "python.defaultInterpreterPath": "C:\\Users\\think\\anaconda3\\envs\\myenv\\python.exe",
+{
+    "python.condaPath": "C:\\Users\\think\\anaconda3\\Scripts\\conda.exe",
+    "python.pyrefly.configPath": "${workspaceFolder}/pyrefly.toml",
     "python.terminal.activateEnvironment": true,
     "terminal.integrated.defaultProfile.windows": "PowerShell",
     "terminal.integrated.profiles.windows": {
