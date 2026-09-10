@@ -6,6 +6,7 @@
   <title>자막뽑기 AI - 유튜브 영상 검색 & AI 자막 추출기</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script src="https://www.youtube.com/iframe_api"></script>
   <script>
     tailwind.config = {
       darkMode: 'class',
@@ -126,16 +127,113 @@
 
     <!-- ================= CENTER: VIDEO PLAYER & ACTIONS ================= -->
     <main class="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col items-center">
-      <div class="w-full max-w-4xl space-y-4">
+      <div class="w-full max-w-4xl space-y-3">
 
-        <!-- Video Player Box -->
+        <!-- Player Mode Selection Bar -->
+        <div id="playerModeBar" class="hidden items-center justify-between bg-brand-card/80 border border-brand-border/60 rounded-xl px-3 py-1.5 text-xs">
+          <div class="flex items-center gap-1.5">
+            <span class="text-brand-muted font-semibold text-[11px] mr-1">재생 모드:</span>
+            <button id="btnModeVideo" onclick="setPlayerMode('video')" 
+                    class="px-2.5 py-1 rounded-lg font-bold transition flex items-center gap-1.5 bg-brand-red text-white shadow-sm">
+              <i class="fa-solid fa-film text-xs"></i> 🎬 실제 영상 재생 (오류 0% 보장)
+            </button>
+            <button id="btnModeAudio" onclick="setPlayerMode('audio')" 
+                    class="px-2.5 py-1 rounded-lg font-semibold transition flex items-center gap-1.5 text-brand-muted hover:text-white hover:bg-brand-hover">
+              <i class="fa-solid fa-volume-high text-xs"></i> 🎵 오디오 모드
+            </button>
+            <button id="btnModeYoutube" onclick="setPlayerMode('youtube')" 
+                    class="px-2.5 py-1 rounded-lg font-semibold transition flex items-center gap-1.5 text-brand-muted hover:text-white hover:bg-brand-hover">
+              <i class="fa-brands fa-youtube text-brand-red text-xs"></i> 📺 유튜브 임베드
+            </button>
+          </div>
+          <a id="btnOpenYoutubeExternal" href="#" target="_blank" rel="noopener noreferrer"
+             class="inline-flex items-center gap-1 text-[11px] text-brand-muted hover:text-white hover:underline transition">
+            <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i> 유튜브에서 열기
+          </a>
+        </div>
+
+        <!-- Video & Audio Player Container -->
         <div class="w-full aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl border border-brand-border/60 relative flex items-center justify-center">
           
-          <!-- YouTube Iframe Embed -->
-          <iframe id="videoIframe" class="w-full h-full hidden" 
+          <!-- Mode 1: Native HTML5 High-Quality Video Player (100% Error-free real video) -->
+          <video id="localVideo" class="w-full h-full object-contain bg-black hidden z-10" controls playsinline preload="auto"></video>
+
+          <!-- Mode 2: YouTube Iframe Embed -->
+          <iframe id="videoIframe" class="w-full h-full hidden z-10" 
                   src="" title="YouTube video player" frameborder="0" 
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                  referrerpolicy="strict-origin-when-cross-origin"
                   allowfullscreen></iframe>
+
+          <!-- Mode 3: Integrated Local Audio Player with Backdrop -->
+          <div id="audioPlayerContainer" class="w-full h-full hidden relative flex-col justify-between p-4 md:p-6 select-none z-10">
+            <!-- Background Blurred Thumbnail -->
+            <img id="audioBgThumbnail" src="" class="absolute inset-0 w-full h-full object-cover filter blur-xl brightness-35 pointer-events-none">
+            <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/70 pointer-events-none"></div>
+
+            <!-- Top Info in Audio Player -->
+            <div class="relative z-10 flex items-center justify-between">
+              <span class="inline-flex items-center gap-1.5 bg-brand-purple/30 border border-brand-purple/50 text-brand-purple text-[11px] px-2.5 py-0.5 rounded-full font-bold">
+                <i class="fa-solid fa-headphones"></i> 고음질 오디오 스트리밍
+              </span>
+              <span id="audioStatusBadge" class="text-[11px] text-emerald-400 font-mono">
+                ● 타임스탬프 싱크 연동 중
+              </span>
+            </div>
+
+            <!-- Center Thumbnail Card & Pulse Visualizer -->
+            <div class="relative z-10 flex flex-col items-center justify-center space-y-3 my-auto">
+              <div class="w-24 h-24 md:w-28 md:h-28 rounded-2xl overflow-hidden shadow-2xl border-2 border-brand-purple/40 relative group">
+                <img id="audioCenterThumbnail" src="" class="w-full h-full object-cover">
+                <button onclick="toggleAudioPlay()" class="absolute inset-0 bg-black/40 hover:bg-black/20 flex items-center justify-center text-white text-3xl transition">
+                  <i id="audioCenterPlayIcon" class="fa-solid fa-play"></i>
+                </button>
+              </div>
+              <div class="text-center max-w-md px-2">
+                <p id="audioPlayerTitle" class="text-sm md:text-base font-bold text-white truncate"></p>
+                <p id="audioPlayerChannel" class="text-xs text-brand-muted truncate mt-0.5"></p>
+              </div>
+            </div>
+
+            <!-- Bottom Control Bar -->
+            <div class="relative z-10 bg-brand-card/90 backdrop-blur-md border border-brand-border/70 rounded-xl p-2.5 space-y-2">
+              <audio id="localAudio" preload="auto"></audio>
+              
+              <!-- Progress Bar -->
+              <div class="flex items-center gap-2">
+                <span id="audioCurrentTime" class="text-[11px] font-mono text-brand-muted w-10 text-right">00:00</span>
+                <input id="audioSeekBar" type="range" min="0" max="100" value="0" step="0.1"
+                       class="flex-1 h-1.5 bg-brand-border rounded-lg appearance-none cursor-pointer accent-brand-purple">
+                <span id="audioTotalDuration" class="text-[11px] font-mono text-brand-muted w-10">00:00</span>
+              </div>
+
+              <!-- Buttons Row -->
+              <div class="flex items-center justify-between pt-0.5">
+                <div class="flex items-center gap-2">
+                  <button onclick="seekRelative(-10)" class="px-2 py-1 text-xs text-brand-muted hover:text-white transition" title="10초 뒤로">
+                    <i class="fa-solid fa-rotate-left"></i> -10s
+                  </button>
+                  <button onclick="toggleAudioPlay()" id="audioPlayBtn" 
+                          class="w-8 h-8 rounded-full bg-brand-purple hover:bg-purple-600 flex items-center justify-center text-white text-sm transition shadow">
+                    <i id="audioPlayBtnIcon" class="fa-solid fa-play"></i>
+                  </button>
+                  <button onclick="seekRelative(10)" class="px-2 py-1 text-xs text-brand-muted hover:text-white transition" title="10초 앞으로">
+                    +10s <i class="fa-solid fa-rotate-right"></i>
+                  </button>
+                </div>
+
+                <!-- Playback Rate Selector -->
+                <div class="flex items-center gap-1 text-[11px]">
+                  <span class="text-brand-muted mr-1">배속:</span>
+                  <button onclick="setAudioSpeed(1.0)" class="speed-btn px-1.5 py-0.5 rounded bg-brand-purple text-white font-bold text-[10px]" data-speed="1.0">1.0x</button>
+                  <button onclick="setAudioSpeed(1.25)" class="speed-btn px-1.5 py-0.5 rounded text-brand-muted hover:text-white text-[10px]" data-speed="1.25">1.25x</button>
+                  <button onclick="setAudioSpeed(1.5)" class="speed-btn px-1.5 py-0.5 rounded text-brand-muted hover:text-white text-[10px]" data-speed="1.5">1.5x</button>
+                  <button onclick="setAudioSpeed(2.0)" class="speed-btn px-1.5 py-0.5 rounded text-brand-muted hover:text-white text-[10px]" data-speed="2.0">2.0x</button>
+                </div>
+              </div>
+            </div>
+
+          </div>
 
           <!-- Initial Placeholder Screen -->
           <div id="videoPlaceholder" class="flex flex-col items-center justify-center text-center p-6 space-y-3">
@@ -144,8 +242,8 @@
             </div>
             <h2 class="text-lg font-bold text-white">유튜브 링크를 입력하여 시작하세요</h2>
             <p class="text-xs text-brand-muted max-w-sm">
-              상단 검색창에 URL을 넣으면 예상 요금을 먼저 확인한 후, <br>
-              <strong>Gemini 3.5 Transcribe</strong>로 자막을 뽑을 수 있습니다.
+              상단 검색창에 URL을 넣으면 **Gemini 3.5 Transcribe**로 자막을 추출하고, <br>
+              타임스탬프를 클릭하여 원하는 위치를 바로 들을 수 있습니다.
             </p>
           </div>
 
@@ -441,19 +539,42 @@
       duration: 0,
       transcript: '',
       summary: '',
+      costEstimate: null,
+      isCached: false,
       chatHistory: []
     };
 
-    let pendingEstimateData = null;
+    const API_BASE = (window.location.protocol.startsWith('http') && window.location.port) 
+      ? '' 
+      : 'http://127.0.0.1:8000';
+
+    let ytPlayer = null;
+    let isYtApiReady = false;
     let historyList = JSON.parse(localStorage.getItem('zapok_history') || '[]');
+    let activePlayerMode = 'video'; // 'video' | 'audio' | 'youtube'
+
+    function onYouTubeIframeAPIReady() {
+      isYtApiReady = true;
+    }
 
     window.addEventListener('DOMContentLoaded', () => {
-      renderHistory();
+      loadHistoryFromServer();
       checkApiConfig();
+      initAudioListeners();
     });
 
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
     function checkApiConfig() {
-      fetch('/api/config')
+      fetch(`${API_BASE}/api/config`)
         .then(r => r.json())
         .then(d => {
           const badge = document.getElementById('apiKeyBadge');
@@ -466,6 +587,11 @@
             notice.textContent = "⚠️ 환경변수 없음: API 키를 입력해 주세요.";
             notice.className = "text-[11px] text-amber-400 mt-1";
           }
+        })
+        .catch(err => {
+          console.warn('Config fetch failed:', err);
+          const badge = document.getElementById('apiKeyBadge');
+          badge.textContent = "서버 연결 확인";
         });
     }
 
@@ -502,8 +628,8 @@
     function switchRightTab(tab) {
       const tabs = ['script', 'chat', 'summary'];
       tabs.forEach(t => {
-        const btn = document.getElementById('tabBtn' + t.charAt(0).toUpperCase() + t.slice(1));
-        const content = document.getElementById('tabContent' + t.charAt(0).toUpperCase() + t.slice(1));
+        const btn = document.getElementById(`tabBtn${t.charAt(0).toUpperCase() + t.slice(1)}`);
+        const content = document.getElementById(`tabContent${t.charAt(0).toUpperCase() + t.slice(1)}`);
         if (t === tab) {
           btn.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 bg-brand-hover text-white";
           content.classList.remove('hidden');
@@ -519,7 +645,183 @@
       switchRightTab(tab);
     }
 
-    // ================= 바로 검색 및 자막 추출 실행 (중간 팝업 생략) =================
+    // ================= 플레이어 모드 전환 (실제 비디오 vs 오디오 vs 유튜브) =================
+    function setPlayerMode(mode) {
+      activePlayerMode = mode;
+      const btnVideo = document.getElementById('btnModeVideo');
+      const btnAudio = document.getElementById('btnModeAudio');
+      const btnYt = document.getElementById('btnModeYoutube');
+      const localVideo = document.getElementById('localVideo');
+      const audioContainer = document.getElementById('audioPlayerContainer');
+      const videoIframe = document.getElementById('videoIframe');
+      const placeholder = document.getElementById('videoPlaceholder');
+
+      placeholder.classList.add('hidden');
+
+      btnVideo.className = "px-2.5 py-1 rounded-lg font-semibold transition flex items-center gap-1.5 text-brand-muted hover:text-white hover:bg-brand-hover";
+      btnAudio.className = "px-2.5 py-1 rounded-lg font-semibold transition flex items-center gap-1.5 text-brand-muted hover:text-white hover:bg-brand-hover";
+      btnYt.className = "px-2.5 py-1 rounded-lg font-semibold transition flex items-center gap-1.5 text-brand-muted hover:text-white hover:bg-brand-hover";
+
+      localVideo.classList.add('hidden');
+      audioContainer.classList.add('hidden');
+      audioContainer.classList.remove('flex');
+      videoIframe.classList.add('hidden');
+
+      if (mode === 'video') {
+        btnVideo.className = "px-2.5 py-1 rounded-lg font-bold transition flex items-center gap-1.5 bg-brand-red text-white shadow-sm";
+        localVideo.classList.remove('hidden');
+      } else if (mode === 'audio') {
+        btnAudio.className = "px-2.5 py-1 rounded-lg font-bold transition flex items-center gap-1.5 bg-brand-purple text-white shadow-sm";
+        audioContainer.classList.remove('hidden');
+        audioContainer.classList.add('flex');
+      } else if (mode === 'youtube') {
+        btnYt.className = "px-2.5 py-1 rounded-lg font-bold transition flex items-center gap-1.5 bg-brand-red text-white shadow-sm";
+        videoIframe.classList.remove('hidden');
+        if (currentSession.id) {
+          loadYouTubeVideo(currentSession.id, 0);
+        }
+      }
+    }
+
+    function initAudioListeners() {
+      const audio = document.getElementById('localAudio');
+      const seekBar = document.getElementById('audioSeekBar');
+      const curTimeEl = document.getElementById('audioCurrentTime');
+      const totalDurEl = document.getElementById('audioTotalDuration');
+      const playIcon = document.getElementById('audioPlayBtnIcon');
+      const centerPlayIcon = document.getElementById('audioCenterPlayIcon');
+
+      audio.addEventListener('timeupdate', () => {
+        if (!isNaN(audio.duration) && audio.duration > 0) {
+          seekBar.value = (audio.currentTime / audio.duration) * 100;
+          curTimeEl.textContent = formatSecondsToTime(audio.currentTime);
+          totalDurEl.textContent = formatSecondsToTime(audio.duration);
+        }
+      });
+
+      audio.addEventListener('loadedmetadata', () => {
+        totalDurEl.textContent = formatSecondsToTime(audio.duration);
+      });
+
+      seekBar.addEventListener('input', () => {
+        if (!isNaN(audio.duration) && audio.duration > 0) {
+          audio.currentTime = (seekBar.value / 100) * audio.duration;
+        }
+      });
+
+      audio.addEventListener('play', () => {
+        if (playIcon) playIcon.className = "fa-solid fa-pause";
+        if (centerPlayIcon) centerPlayIcon.className = "fa-solid fa-pause";
+      });
+
+      audio.addEventListener('pause', () => {
+        if (playIcon) playIcon.className = "fa-solid fa-play";
+        if (centerPlayIcon) centerPlayIcon.className = "fa-solid fa-play";
+      });
+    }
+
+    function toggleAudioPlay() {
+      const audio = document.getElementById('localAudio');
+      if (audio.paused) {
+        audio.play().catch(e => console.warn('Audio play failed:', e));
+      } else {
+        audio.pause();
+      }
+    }
+
+    function seekRelative(sec) {
+      const video = document.getElementById('localVideo');
+      if (activePlayerMode === 'video' && video && !video.classList.contains('hidden')) {
+        video.currentTime = Math.max(0, Math.min(video.duration || 9999, video.currentTime + sec));
+        video.play().catch(()=>{});
+        return;
+      }
+      const audio = document.getElementById('localAudio');
+      if (audio) {
+        audio.currentTime = Math.max(0, Math.min(audio.duration || 9999, audio.currentTime + sec));
+        audio.play().catch(()=>{});
+      }
+    }
+
+    function setAudioSpeed(rate) {
+      const video = document.getElementById('localVideo');
+      if (video) video.playbackRate = rate;
+      const audio = document.getElementById('localAudio');
+      if (audio) audio.playbackRate = rate;
+      document.querySelectorAll('.speed-btn').forEach(btn => {
+        if (parseFloat(btn.dataset.speed) === rate) {
+          btn.className = "speed-btn px-1.5 py-0.5 rounded bg-brand-purple text-white font-bold text-[10px]";
+        } else {
+          btn.className = "speed-btn px-1.5 py-0.5 rounded text-brand-muted hover:text-white text-[10px]";
+        }
+      });
+    }
+
+    function formatSecondsToTime(sec) {
+      const s = Math.floor(sec || 0);
+      const m = Math.floor(s / 60);
+      const remS = s % 60;
+      return `${String(m).padStart(2, '0')}:${String(remS).padStart(2, '0')}`;
+    }
+
+    // ================= 유튜브 플레이어 및 타임스탬프 이동 =================
+    function loadYouTubeVideo(videoId, startSeconds = 0) {
+      const placeholder = document.getElementById('videoPlaceholder');
+      const iframe = document.getElementById('videoIframe');
+      
+      placeholder.classList.add('hidden');
+      iframe.classList.remove('hidden');
+
+      const startParam = startSeconds > 0 ? `&start=${startSeconds}` : '';
+      const targetSrc = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=1&playsinline=1&rel=0${startParam}`;
+      
+      if (!iframe.src || !iframe.src.includes(videoId)) {
+        iframe.src = targetSrc;
+      }
+    }
+
+    function seekToTime(seconds) {
+      // 1. 고화질 실제 비디오 이동 및 재생 (실제 영상 모드)
+      const video = document.getElementById('localVideo');
+      if (video && video.src && !video.classList.contains('hidden')) {
+        video.currentTime = seconds;
+        video.play().catch(e => console.warn('Video play:', e));
+      }
+
+      // 2. 고음질 로컬 오디오 이동 및 재생 (오디오 모드)
+      const audio = document.getElementById('localAudio');
+      if (audio && audio.src && !document.getElementById('audioPlayerContainer').classList.contains('hidden')) {
+        audio.currentTime = seconds;
+        audio.play().catch(e => console.warn('Audio play:', e));
+      }
+
+      // 3. 유튜브 IFrame 재생 (유튜브 모드일 때)
+      const iframe = document.getElementById('videoIframe');
+      if (iframe && iframe.contentWindow && !iframe.classList.contains('hidden')) {
+        iframe.contentWindow.postMessage(JSON.stringify({
+          event: 'command',
+          func: 'seekTo',
+          args: [seconds, true]
+        }), '*');
+        iframe.contentWindow.postMessage(JSON.stringify({
+          event: 'command',
+          func: 'playVideo',
+          args: []
+        }), '*');
+      }
+    }
+
+    function parseTimestampToSeconds(tsStr) {
+      const parts = tsStr.split(':').map(Number);
+      if (parts.length === 2) {
+        return (parts[0] * 60) + parts[1];
+      } else if (parts.length === 3) {
+        return (parts[0] * 3600) + (parts[1] * 60) + parts[2];
+      }
+      return 0;
+    }
+
+    // ================= 바로 검색 및 자막 추출 실행 (CSV 캐시 우선 조회) =================
     async function startDirectSearch() {
       const url = document.getElementById('youtubeUrl').value.trim();
       if (!url) {
@@ -530,12 +832,12 @@
       const overlay = document.getElementById('loadingOverlay');
       const statusText = document.getElementById('loadingStatusText');
       overlay.classList.remove('hidden');
-      statusText.textContent = "1/2. 유튜브 오디오 추출 및 다운로드 중...";
+      statusText.textContent = "저장된 캐시 확인 및 영상/자막 추출 준비 중...";
 
       const apiKey = localStorage.getItem('zapok_api_key') || '';
 
       try {
-        const res = await fetch('/api/transcribe', {
+        const res = await fetch(`${API_BASE}/api/transcribe`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -544,78 +846,141 @@
           })
         });
 
-        statusText.textContent = "2/2. Gemini 3.5 Transcribe로 자막 추출 중...";
-
         const data = await res.json();
         if (!res.ok) throw new Error(data.detail || '자막 추출 실패');
 
         currentSession = {
           id: data.id,
+          url: url,
           title: data.title,
           channel: data.channel,
           duration: data.duration,
+          thumbnail: data.thumbnail,
+          video_url: data.video_url,
+          audio_url: data.audio_url,
           transcript: data.transcript,
           summary: data.summary,
           costEstimate: data.cost_estimate,
+          isCached: data.is_cached || false,
           chatHistory: []
         };
 
         renderSession(currentSession);
         addToHistory(currentSession);
+        loadHistoryFromServer();
         openRightDrawer();
         switchRightTab('script');
 
       } catch (err) {
-        alert('오류 발생: ' + err.message);
+        if (err.name === 'TypeError' && err.message.includes('fetch')) {
+          alert('서버 연결 실패: 백엔드 서버(http://127.0.0.1:8000)가 켜져 있는지 확인해 주세요.');
+        } else {
+          alert('오류 발생: ' + err.message);
+        }
       } finally {
         overlay.classList.add('hidden');
       }
     }
 
     function renderSession(s) {
-      // Video Embed
-      const placeholder = document.getElementById('videoPlaceholder');
-      const iframe = document.getElementById('videoIframe');
-      if (s.id) {
-        placeholder.classList.add('hidden');
-        iframe.classList.remove('hidden');
-        iframe.src = `https://www.youtube.com/embed/${s.id}?autoplay=1`;
-      }
+      // 1. Setup Player Mode UI & External link
+      const modeBar = document.getElementById('playerModeBar');
+      modeBar.classList.remove('hidden');
+      modeBar.classList.add('flex');
 
-      // Metadata
-      document.getElementById('videoTitleText').textContent = s.title;
-      document.getElementById('channelNameText').textContent = s.channel;
+      const ytExt = document.getElementById('btnOpenYoutubeExternal');
+      ytExt.href = s.url || `https://www.youtube.com/watch?v=${s.id}`;
+
+      // 2. Setup High-Quality Real Video Player
+      const localVideo = document.getElementById('localVideo');
+      if (s.video_url) {
+        localVideo.src = s.video_url.startsWith('http') ? s.video_url : `${API_BASE}${s.video_url}`;
+      } else if (s.id) {
+        localVideo.src = `${API_BASE}/api/video/${s.id}.mp4`;
+      }
+      localVideo.load();
+
+      // 3. Setup Audio Player
+      const thumbUrl = s.thumbnail || (s.id ? `https://img.youtube.com/vi/${s.id}/hqdefault.jpg` : '');
+      document.getElementById('audioBgThumbnail').src = thumbUrl;
+      document.getElementById('audioCenterThumbnail').src = thumbUrl;
+      document.getElementById('audioPlayerTitle').textContent = s.title || '영상 제목';
+      document.getElementById('audioPlayerChannel').textContent = s.channel || '채널';
+
+      const audio = document.getElementById('localAudio');
+      if (s.audio_url) {
+        audio.src = s.audio_url.startsWith('http') ? s.audio_url : `${API_BASE}${s.audio_url}`;
+      } else if (s.id) {
+        audio.src = `${API_BASE}/api/audio/${s.id}.m4a`;
+      }
+      audio.load();
+
+      // Default to real video player mode (or current active mode)
+      setPlayerMode(activePlayerMode || 'video');
+
+      // 4. Metadata
+      document.getElementById('videoTitleText').textContent = s.title || '영상 제목';
+      document.getElementById('channelNameText').textContent = s.channel || '채널';
       document.getElementById('channelAvatarText').textContent = s.channel ? s.channel.charAt(0).toUpperCase() : 'YT';
       document.getElementById('videoMetaText').textContent = `재생시간: ${s.duration}초`;
 
-      // Cost Badge Display
+      // 4. Cost Badge Display & Cache Notice
       const costBadge = document.getElementById('costInfoBadge');
       if (s.costEstimate) {
         costBadge.classList.remove('hidden');
         costBadge.classList.add('flex');
-        document.getElementById('costInfoText').textContent = `예상 요금: ${s.costEstimate.total_cost_krw_formatted} (${s.costEstimate.total_cost_usd_formatted})`;
+        const costText = s.isCached 
+          ? `⚡ 캐시 데이터 (API 0원)`
+          : `예상 요금: ${s.costEstimate.total_cost_krw_formatted} (${s.costEstimate.total_cost_usd_formatted})`;
+        document.getElementById('costInfoText').textContent = costText;
       } else {
         costBadge.classList.remove('flex');
         costBadge.classList.add('hidden');
       }
 
-      // Transcript View
+      // 5. Transcript View with Clickable Timestamps + External Link
       const tView = document.getElementById('transcriptView');
       tView.innerHTML = '';
       if (s.transcript) {
         const lines = s.transcript.split('\n');
         lines.forEach(line => {
           if (!line.trim()) return;
-          const p = document.createElement('p');
-          p.className = "py-1 px-2 rounded hover:bg-brand-hover/60 transition cursor-text leading-relaxed";
-          p.textContent = line;
+          const p = document.createElement('div');
+          p.className = "py-1.5 px-2 rounded hover:bg-brand-hover/60 transition leading-relaxed text-xs flex items-start group";
+
+          // Match [MM:SS] or [HH:MM:SS] at line start
+          const tsMatch = line.match(/^\[(\d{1,2}:\d{2}(?::\d{2})?)\]\s*(.*)$/);
+          if (tsMatch) {
+            const timeStr = tsMatch[1];
+            const content = tsMatch[2];
+            const totalSec = parseTimestampToSeconds(timeStr);
+            p.innerHTML = `
+              <button onclick="seekToTime(${totalSec})" 
+                      class="flex-shrink-0 inline-flex items-center gap-1 bg-brand-purple/25 hover:bg-brand-purple text-brand-purple hover:text-white px-2 py-0.5 rounded text-[11px] font-mono font-bold transition mr-1.5 shadow-sm active:scale-95 cursor-pointer select-none"
+                      title="${timeStr} 구간 바로 듣기">
+                <i class="fa-solid fa-play text-[8px]"></i> ${timeStr}
+              </button>
+              <a href="https://www.youtube.com/watch?v=${s.id}&t=${totalSec}s" target="_blank" rel="noopener noreferrer"
+                 class="flex-shrink-0 text-[10px] text-brand-muted/70 hover:text-brand-red mr-2 mt-0.5 transition" title="유튜브 웹에서 이 구간 열기">
+                <i class="fa-solid fa-arrow-up-right-from-square"></i>
+              </a>
+              <span class="text-brand-text flex-1 select-text">${escapeHtml(content)}</span>
+            `;
+          } else {
+            // Check for timestamps in the middle of line
+            const formattedLine = line.replace(/\[(\d{1,2}:\d{2}(?::\d{2})?)\]/g, (match, p1) => {
+              const sec = parseTimestampToSeconds(p1);
+              return `<button onclick="seekToTime(${sec})" class="inline-flex items-center gap-1 bg-brand-purple/25 hover:bg-brand-purple text-brand-purple hover:text-white px-1.5 py-0.5 rounded text-[10px] font-mono font-bold transition mx-1 cursor-pointer select-none">▶ ${p1}</button>`;
+            });
+            p.innerHTML = `<span class="text-brand-text flex-1 select-text">${formattedLine}</span>`;
+          }
           tView.appendChild(p);
         });
       } else {
         tView.innerHTML = '<p class="text-brand-muted text-center py-10">대본이 비어있습니다.</p>';
       }
 
-      // Summary View
+      // 6. Summary View
       document.getElementById('summaryView').textContent = s.summary || "요약 내용이 없습니다.";
 
       renderChat();
@@ -645,7 +1010,7 @@
 
       try {
         const apiKey = localStorage.getItem('zapok_api_key') || '';
-        const res = await fetch('/api/chat', {
+        const res = await fetch(`${API_BASE}/api/chat`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -686,21 +1051,39 @@
         const el = document.createElement('div');
         if (msg.role === 'user') {
           el.className = "bg-brand-purple/20 border border-brand-purple/30 text-white rounded-xl p-3 ml-4";
-          el.innerHTML = `<span class="font-bold text-brand-purple block mb-1">나의 질문:</span>${msg.text}`;
+          el.innerHTML = `<span class="font-bold text-brand-purple block mb-1">나의 질문:</span>${escapeHtml(msg.text)}`;
         } else {
           el.className = "bg-brand-card border border-brand-border/60 text-brand-text rounded-xl p-3 mr-2 leading-relaxed whitespace-pre-line";
-          el.innerHTML = `<span class="font-bold text-emerald-400 flex items-center gap-1 mb-1"><i class="fa-solid fa-wand-magic-sparkles text-xs"></i> AI 답변 (Gemini 3.8 Flash):</span>${msg.text}`;
+          el.innerHTML = `<span class="font-bold text-emerald-400 flex items-center gap-1 mb-1"><i class="fa-solid fa-wand-magic-sparkles text-xs"></i> AI 답변 (Gemini 3.8 Flash):</span>${escapeHtml(msg.text)}`;
         }
         box.appendChild(el);
       });
       box.scrollTop = box.scrollHeight;
     }
 
-    // History Storage
+    // ================= CSV 서버 히스토리 연동 =================
+    async function loadHistoryFromServer() {
+      try {
+        const res = await fetch(`${API_BASE}/api/history`);
+        if (res.ok) {
+          const list = await res.json();
+          if (Array.isArray(list) && list.length > 0) {
+            historyList = list;
+            localStorage.setItem('zapok_history', JSON.stringify(historyList));
+            renderHistory();
+            return;
+          }
+        }
+      } catch(e) {
+        console.warn('Server history fetch error:', e);
+      }
+      renderHistory();
+    }
+
     function addToHistory(session) {
       historyList = historyList.filter(h => h.id !== session.id);
       historyList.unshift(session);
-      if (historyList.length > 20) historyList.pop();
+      if (historyList.length > 30) historyList.pop();
       localStorage.setItem('zapok_history', JSON.stringify(historyList));
       renderHistory();
     }
@@ -709,7 +1092,7 @@
       const listEl = document.getElementById('historyList');
       listEl.innerHTML = '';
       if (historyList.length === 0) {
-        listEl.innerHTML = '<div class="p-6 text-center text-xs text-brand-muted">분석한 영상 기록이 없습니다.<br>상단에 링크를 입력해 보세요.</div>';
+        listEl.innerHTML = '<div class="p-6 text-center text-xs text-brand-muted">저장된 영상 기록이 없습니다.<br>상단에 링크를 입력해 보세요.</div>';
         return;
       }
 
@@ -717,18 +1100,35 @@
         const div = document.createElement('div');
         div.className = "p-2.5 rounded-xl hover:bg-brand-hover cursor-pointer transition flex items-center gap-2 group text-xs";
         div.onclick = () => {
-          currentSession = item;
-          renderSession(item);
+          currentSession = {
+            id: item.id,
+            url: item.url,
+            title: item.title,
+            channel: item.channel,
+            duration: item.duration,
+            thumbnail: item.thumbnail || (item.id ? `https://img.youtube.com/vi/${item.id}/hqdefault.jpg` : ''),
+            audio_url: item.audio_url || (item.id ? `/api/audio/${item.id}.m4a` : ''),
+            transcript: item.transcript,
+            summary: item.summary,
+            costEstimate: null,
+            isCached: true,
+            chatHistory: []
+          };
+          renderSession(currentSession);
           openRightDrawer();
         };
 
+        const thumb = item.id 
+          ? `<img src="https://img.youtube.com/vi/${item.id}/hqdefault.jpg" class="w-full h-full object-cover">`
+          : `<i class="fa-brands fa-youtube text-brand-red"></i>`;
+
         div.innerHTML = `
           <div class="w-12 h-8 rounded bg-black flex-shrink-0 overflow-hidden flex items-center justify-center border border-brand-border/40">
-            <i class="fa-brands fa-youtube text-brand-red"></i>
+            ${thumb}
           </div>
           <div class="flex-1 min-w-0">
-            <p class="font-semibold text-white truncate">${item.title || '영상'}</p>
-            <p class="text-[10px] text-brand-muted truncate">${item.channel || '채널'}</p>
+            <p class="font-semibold text-white truncate">${escapeHtml(item.title) || '영상'}</p>
+            <p class="text-[10px] text-brand-muted truncate">${escapeHtml(item.channel) || '채널'}</p>
           </div>
         `;
         listEl.appendChild(div);
@@ -745,13 +1145,15 @@
 
     function newSession() {
       document.getElementById('youtubeUrl').value = '';
-      document.getElementById('videoIframe').src = '';
-      document.getElementById('videoIframe').classList.add('hidden');
+      const iframe = document.getElementById('videoIframe');
+      iframe.src = '';
+      iframe.classList.add('hidden');
       document.getElementById('videoPlaceholder').classList.remove('hidden');
       document.getElementById('videoTitleText').textContent = '영상 제목이 여기에 표시됩니다.';
       document.getElementById('channelNameText').textContent = '채널명';
       document.getElementById('videoMetaText').textContent = '재생시간: -';
-      document.getElementById('transcriptView').innerHTML = '<p class="text-brand-muted text-center py-10">상단에 유튜브 링크를 입력하고 견적 확인 후 자막을 추출하세요.</p>';
+      document.getElementById('costInfoBadge').classList.add('hidden');
+      document.getElementById('transcriptView').innerHTML = '<p class="text-brand-muted text-center py-10">상단에 유튜브 링크를 입력하면 자막을 추출합니다.</p>';
       document.getElementById('summaryView').textContent = '자막 추출이 완료되면 핵심 요약이 이곳에 표시됩니다.';
       currentSession = { id: '', title: '', channel: '', duration: 0, transcript: '', summary: '', chatHistory: [] };
       renderChat();

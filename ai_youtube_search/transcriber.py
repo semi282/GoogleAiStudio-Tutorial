@@ -17,7 +17,7 @@ def transcribe_audio_stream(
     enable_diarization: bool = True,
     enable_timestamps: bool = True,
 ) -> Generator[str, None, None]:
-    """gemini-3.5-transcribe 모델을 사용하여 오디오의 타임스탬프와 트랜스크립트를 생성합니다."""
+    """오디오 파일을 분석하여 화자 분리 및 [MM:SS] 형식의 정밀 타임스탬프가 포함된 트랜스크립트를 생성합니다."""
     file_size_mb = os.path.getsize(audio_path) / (1024 * 1024)
 
     uploaded_file = None
@@ -29,34 +29,26 @@ def transcribe_audio_stream(
         uploaded_file = client.files.upload(file=audio_path, mime_type=mime_type)
         audio_part = uploaded_file
 
-    config = types.GenerateContentConfig(
-        audio_transcription_config=types.AudioTranscriptionConfig(
-            word_timestamp=enable_timestamps,
-            diarization=enable_diarization,
-        ),
-    )
+    prompt = """다음 오디오를 정밀하게 분석하여 화자 분리(Diarization)와 함께 시간대별 타임스탬프를 포함하여 한국어/영어 대사를 전사해 주세요.
+[규칙]:
+1. 반드시 각 문장이나 발화가 시작하는 시점에 [MM:SS] 형식(예: [00:05] 화자 1: 대사 내용)으로 타임스탬프를 붙여주세요.
+2. 모든 대화, 영어 및 한국어 발화를 누락 없이 정확하게 작성하세요.
+3. [MM:SS] 화자 N: 대사 내용 형식 외에 불필요한 서두나 결말 텍스트는 출력하지 마세요."""
 
     contents = [
         types.Content(
             role="user",
-            parts=[audio_part],
+            parts=[audio_part, types.Part.from_text(text=prompt)],
         )
     ]
 
     try:
         for chunk in client.models.generate_content_stream(
-            model=STT_MODEL_NAME,
+            model="gemini-3.6-flash",
             contents=contents,
-            config=config,
         ):
             if chunk.text:
                 yield chunk.text
-            elif chunk.candidates and chunk.candidates[0].content and chunk.candidates[0].content.parts:
-                for part in chunk.candidates[0].content.parts:
-                    if hasattr(part, "audio_transcription") and part.audio_transcription:
-                        at = part.audio_transcription
-                        if hasattr(at, "text") and at.text:
-                            yield at.text
     finally:
         if uploaded_file is not None:
             try:
