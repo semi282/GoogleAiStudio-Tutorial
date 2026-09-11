@@ -60,6 +60,21 @@ async def serve_index():
     return HTMLResponse(content=index_file.read_text(encoding="utf-8"))
 
 
+@app.get("/style.css")
+async def serve_style():
+    return FileResponse(CURRENT_DIR / "style.css", media_type="text/css")
+
+
+@app.get("/app.js")
+async def serve_js():
+    return FileResponse(CURRENT_DIR / "app.js", media_type="application/javascript")
+
+
+@app.get("/app.ts")
+async def serve_ts():
+    return FileResponse(CURRENT_DIR / "app.ts", media_type="text/plain")
+
+
 @app.get("/api/config")
 async def get_config():
     has_key = bool(os.environ.get("GEMINI_API_KEY"))
